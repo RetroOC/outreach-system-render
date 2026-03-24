@@ -10,7 +10,11 @@ _Learn about the person you're helping. Update this as you go._
 
 ## Context
 
-_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_
+- Prefers outcome-first execution over discussion.
+- Does not want unnecessary questions when enough context exists to act.
+- Wants me to make the best possible decision proactively and only ask when truly blocked, risky, or ambiguous.
+- Interested in building systems fast, especially around outreach automation.
+
 
 ---
 
