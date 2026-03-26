@@ -6,6 +6,8 @@ Initial MVP backend scaffold for the outreach system.
 
 - Fastify REST API scaffold
 - in-memory repository for rapid iteration
+- concrete Postgres schema in `db/schema.sql`
+- first Postgres repository layer in `src/postgres/`
 - campaign / lead / inbox / enrollment resources
 - scheduler skeleton for due enrollment processing
 - provider-agnostic `ai-runtime`
@@ -30,7 +32,7 @@ npm run dev
 
 ## Next build steps
 
-1. replace in-memory repo with Postgres repositories
+1. wire the API from in-memory storage to the Postgres repositories
 2. add job queue and worker processes
 3. add real provider adapters for LLMs
 4. add Gmail / Graph / SMTP connectors
