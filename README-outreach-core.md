@@ -1,0 +1,37 @@
+# outreach-core
+
+Initial MVP backend scaffold for the outreach system.
+
+## What is included
+
+- Fastify REST API scaffold
+- in-memory repository for rapid iteration
+- campaign / lead / inbox / enrollment resources
+- scheduler skeleton for due enrollment processing
+- provider-agnostic `ai-runtime`
+- mock adapters for OpenAI, Anthropic, DeepSeek, Gemini, and local models
+
+## Current limitations
+
+This is intentionally the first working backend slice, not the finished production system.
+
+- persistence is in-memory only
+- no real inbox provider auth yet
+- no real email sending yet
+- no Postgres, queue, Redis, or workers yet
+- AI adapters are mocked to prove architecture and interfaces
+
+## Run
+
+```bash
+npm install
+npm run dev
+```
+
+## Next build steps
+
+1. replace in-memory repo with Postgres repositories
+2. add job queue and worker processes
+3. add real provider adapters for LLMs
+4. add Gmail / Graph / SMTP connectors
+5. add auth, idempotency, audit logs, and webhooks
