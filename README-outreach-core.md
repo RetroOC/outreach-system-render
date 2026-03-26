@@ -17,10 +17,10 @@ Initial MVP backend scaffold for the outreach system.
 
 This is intentionally the first working backend slice, not the finished production system.
 
-- persistence is in-memory only
+- Postgres schema and storage layer exist, but migrations/runtime wiring still need hardening and real deployment setup
 - no real inbox provider auth yet
 - no real email sending yet
-- no Postgres, queue, Redis, or workers yet
+- worker exists as a polling skeleton, not a full queue-backed execution system yet
 - AI adapters are mocked to prove architecture and interfaces
 
 ## Run
@@ -28,6 +28,18 @@ This is intentionally the first working backend slice, not the finished producti
 ```bash
 npm install
 npm run dev
+```
+
+### With Postgres
+
+1. create a database
+2. apply `db/schema.sql`
+3. set `DATABASE_URL`
+4. run the API and worker
+
+```bash
+npm run dev
+npm run dev:worker
 ```
 
 ## Next build steps

@@ -1,5 +1,5 @@
 import type { Campaign, Enrollment, Inbox, Lead } from "./domain.js";
-import { InMemoryRepo } from "./repo.js";
+import type { Storage } from "./storage.js";
 
 const toMs = (amount: number, unit: "minutes" | "hours" | "days") => {
   if (unit === "minutes") return amount * 60_000;
@@ -8,35 +8,33 @@ const toMs = (amount: number, unit: "minutes" | "hours" | "days") => {
 };
 
 export class SchedulerService {
-  constructor(private readonly repo: InMemoryRepo) {}
+  constructor(private readonly storage: Storage) {}
 
-  scheduleFirstStep(enrollment: Enrollment): Enrollment {
+  async scheduleFirstStep(enrollment: Enrollment): Promise<Enrollment> {
     enrollment.nextActionAt = new Date(Date.now() + this.jitterMs(10)).toISOString();
-    this.repo.enrollments.set(enrollment.id, enrollment);
-    return enrollment;
+    return this.storage.updateEnrollment(enrollment);
   }
 
-  runDue(now = new Date()): { queued: string[] } {
+  async runDue(now = new Date()): Promise<{ queued: string[] }> {
     const queued: string[] = [];
-    for (const enrollment of this.repo.enrollments.values()) {
-      if (enrollment.state !== "active") continue;
-      if (new Date(enrollment.nextActionAt).getTime() > now.getTime()) continue;
-      const campaign = this.repo.campaigns.get(enrollment.campaignId);
-      const lead = this.repo.leads.get(enrollment.leadId);
-      const inbox = this.repo.inboxes.get(enrollment.assignedInboxId);
+    const due = await this.storage.listDueEnrollments(now.toISOString());
+    for (const enrollment of due) {
+      const campaign = await this.storage.getCampaignById(enrollment.campaignId);
+      const lead = await this.storage.getLeadById(enrollment.leadId);
+      const inbox = await this.storage.getInboxById(enrollment.assignedInboxId);
       if (!campaign || !lead || !inbox) continue;
       if (!this.canSend(campaign, lead, inbox)) continue;
       queued.push(enrollment.id);
       enrollment.state = "processing";
-      this.repo.enrollments.set(enrollment.id, enrollment);
+      await this.storage.updateEnrollment(enrollment);
     }
     return { queued };
   }
 
-  markSent(enrollmentId: string): Enrollment | undefined {
-    const enrollment = this.repo.enrollments.get(enrollmentId);
+  async markSent(enrollmentId: string): Promise<Enrollment | undefined> {
+    const enrollment = await this.storage.getEnrollmentById(enrollmentId);
     if (!enrollment) return undefined;
-    const campaign = this.repo.campaigns.get(enrollment.campaignId);
+    const campaign = await this.storage.getCampaignById(enrollment.campaignId);
     if (!campaign) return undefined;
     enrollment.lastOutboundSentAt = new Date().toISOString();
     enrollment.currentStepIndex += 1;
@@ -49,8 +47,7 @@ export class SchedulerService {
       const nextActionAt = new Date(Date.now() + toMs(nextStep.delay.amount, nextStep.delay.unit) + this.jitterMs(15));
       enrollment.nextActionAt = nextActionAt.toISOString();
     }
-    this.repo.enrollments.set(enrollment.id, enrollment);
-    return enrollment;
+    return this.storage.updateEnrollment(enrollment);
   }
 
   private canSend(_campaign: Campaign, lead: Lead, inbox: Inbox): boolean {
