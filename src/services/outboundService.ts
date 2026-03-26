@@ -1,7 +1,11 @@
 import type { Storage } from "../storage.js";
+import type { EmailProvider } from "../providers/email/types.js";
 
 export class OutboundService {
-  constructor(private readonly storage: Storage) {}
+  constructor(
+    private readonly storage: Storage,
+    private readonly emailProvider: EmailProvider,
+  ) {}
 
   async processSendStepJob(payload: Record<string, unknown>): Promise<void> {
     const enrollmentId = String(payload.enrollmentId ?? "");
@@ -16,13 +20,24 @@ export class OutboundService {
     if (!step) throw new Error(`No current step for enrollment ${enrollmentId}`);
 
     const thread = await this.findOrCreateThread(enrollment.id, lead.id, enrollment.assignedInboxId);
+    const subject = this.render(step.subjectTemplate, lead);
+    const bodyText = this.render(step.bodyTemplate, lead);
+    const sendResult = await this.emailProvider.send({
+      from: "noreply@example.com",
+      to: lead.email,
+      subject,
+      text: bodyText,
+      threadId: thread.id,
+    });
+
     await this.storage.createMessage({
       threadId: thread.id,
       enrollmentId: enrollment.id,
       direction: "outbound",
-      subject: this.render(step.subjectTemplate, lead),
-      bodyText: this.render(step.bodyTemplate, lead),
-      sentAt: new Date().toISOString(),
+      subject,
+      bodyText,
+      providerMessageId: sendResult.providerMessageId,
+      sentAt: sendResult.acceptedAt,
     });
   }
 

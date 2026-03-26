@@ -25,7 +25,7 @@
 
 - [x] Real queue-backed job system (basic app-owned jobs table + worker runtime)
 - [ ] Real email provider connectors
-- [ ] Real LLM provider adapters
+- [~] Real LLM provider adapters (provider registry and dedicated adapter classes added; real API integrations still pending)
 - [x] Webhook signature enforcement
 - [x] Reply ingestion pipeline (basic queued inbound ingestion)
 - [x] Integration-style runtime test coverage (worker flow)
