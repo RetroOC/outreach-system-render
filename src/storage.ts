@@ -27,4 +27,8 @@ export interface Storage {
   getMessageById(id: string): Promise<Message | null>;
   listMessagesByThreadId(threadId: string): Promise<Message[]>;
   updateMessage(message: Message): Promise<Message>;
+
+  createSuppression(input: { accountId: string; email: string; reason: string }): Promise<{ id: string; accountId: string; email: string; reason: string }>;
+  listCampaignsByAccountId(accountId: string): Promise<Campaign[]>;
+  listEnrollmentsByCampaignId(campaignId: string): Promise<Enrollment[]>;
 }

@@ -15,6 +15,10 @@
 - [x] Config/bootstrap wiring
 - [x] Worker process skeleton
 - [x] Environment example
+- [x] API key auth middleware
+- [x] Idempotency middleware
+- [x] Suppression endpoint
+- [x] Campaign listing and basic stats endpoint
 - [x] Type-checking green
 
 ## Next outcomes to ship
@@ -22,10 +26,9 @@
 - [ ] Real queue-backed job system
 - [ ] Real email provider connectors
 - [ ] Real LLM provider adapters
-- [ ] Auth + API keys
-- [ ] Idempotency middleware
-- [ ] Webhook signature validation
+- [ ] Webhook signature enforcement
 - [ ] Reply ingestion pipeline
-- [ ] Suppression endpoints and analytics endpoints
 - [ ] Integration tests
 - [ ] Production deployment files
+- [ ] Containerization / compose
+- [ ] Migrations runner and startup scripts

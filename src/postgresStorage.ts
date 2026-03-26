@@ -7,6 +7,7 @@ import { PostgresInboxRepo } from "./postgres/inboxRepo.js";
 import { PostgresLeadRepo } from "./postgres/leadRepo.js";
 import { PostgresMessageRepo } from "./postgres/messageRepo.js";
 import { PostgresThreadRepo } from "./postgres/threadRepo.js";
+import { PostgresSuppressionRepo } from "./postgres/suppressionRepo.js";
 import type { SqlClient } from "./postgres/types.js";
 
 export class PostgresStorage implements Storage {
@@ -17,6 +18,7 @@ export class PostgresStorage implements Storage {
   private readonly enrollments: PostgresEnrollmentRepo;
   private readonly threads: PostgresThreadRepo;
   private readonly messages: PostgresMessageRepo;
+  private readonly suppressions: PostgresSuppressionRepo;
 
   constructor(private readonly db: SqlClient) {
     this.accounts = new PostgresAccountRepo(db);
@@ -26,6 +28,7 @@ export class PostgresStorage implements Storage {
     this.enrollments = new PostgresEnrollmentRepo(db);
     this.threads = new PostgresThreadRepo(db);
     this.messages = new PostgresMessageRepo(db);
+    this.suppressions = new PostgresSuppressionRepo(db);
   }
 
   createAccount(input: Omit<Account, "id" | "createdAt">) { return this.accounts.create(input); }
@@ -54,6 +57,9 @@ export class PostgresStorage implements Storage {
   getMessageById(id: string) { return this.dbGetMessage(id); }
   listMessagesByThreadId(threadId: string) { return this.dbListMessagesByThreadId(threadId); }
   updateMessage(message: Message) { return this.dbUpdateMessage(message); }
+  createSuppression(input: { accountId: string; email: string; reason: string }) { return this.suppressions.create(input); }
+  listCampaignsByAccountId(accountId: string) { return this.dbListCampaignsByAccountId(accountId); }
+  listEnrollmentsByCampaignId(campaignId: string) { return this.dbListEnrollmentsByCampaignId(campaignId); }
 
   private async dbGetInbox(id: string): Promise<Inbox | null> {
     const result = await this.db.query<any>({ text: `select * from inboxes where id = $1`, values: [id] });
@@ -234,5 +240,27 @@ export class PostgresStorage implements Storage {
       values: [message.id, JSON.stringify(message.classification ?? null)],
     });
     return message;
+  }
+
+  private async dbListCampaignsByAccountId(accountId: string): Promise<Campaign[]> {
+    const result = await this.db.query<any>({ text: `select id from campaigns where account_id = $1 order by created_at desc`, values: [accountId] });
+    const campaigns = await Promise.all(result.rows.map((row) => this.dbGetCampaign(row.id)));
+    return campaigns.filter((item): item is Campaign => Boolean(item));
+  }
+
+  private async dbListEnrollmentsByCampaignId(campaignId: string): Promise<Enrollment[]> {
+    const result = await this.db.query<any>({ text: `select * from enrollments where campaign_id = $1 order by created_at desc`, values: [campaignId] });
+    return result.rows.map((row) => ({
+      id: row.id,
+      campaignId: row.campaign_id,
+      leadId: row.lead_id,
+      assignedInboxId: row.assigned_inbox_id,
+      state: row.state,
+      currentStepIndex: row.current_step_index,
+      nextActionAt: row.next_action_at,
+      lastOutboundSentAt: row.last_outbound_sent_at,
+      lastInboundReceivedAt: row.last_inbound_received_at,
+      stopReason: row.stop_reason,
+    }));
   }
 }

@@ -2,6 +2,8 @@ import type { Storage } from "./storage.js";
 import type { Account, Campaign, Enrollment, Inbox, Lead, Message, Thread } from "./domain.js";
 import { InMemoryRepo } from "./repo.js";
 
+const makeId = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+
 export class InMemoryStorage implements Storage {
   constructor(private readonly repo: InMemoryRepo) {}
 
@@ -34,4 +36,16 @@ export class InMemoryStorage implements Storage {
   async getMessageById(id: string) { return this.repo.messages.get(id) ?? null; }
   async listMessagesByThreadId(threadId: string) { return Array.from(this.repo.messages.values()).filter((item) => item.threadId === threadId); }
   async updateMessage(message: Message) { this.repo.messages.set(message.id, message); return message; }
+
+  async createSuppression(input: { accountId: string; email: string; reason: string }) {
+    return { id: makeId("sup"), ...input };
+  }
+
+  async listCampaignsByAccountId(accountId: string) {
+    return Array.from(this.repo.campaigns.values()).filter((item) => item.accountId === accountId);
+  }
+
+  async listEnrollmentsByCampaignId(campaignId: string) {
+    return Array.from(this.repo.enrollments.values()).filter((item) => item.campaignId === campaignId);
+  }
 }

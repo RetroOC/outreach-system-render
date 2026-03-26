@@ -146,6 +146,18 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     if (result.ok) {
       message.classification = result.data as Record<string, unknown>;
       await storage.updateMessage(message);
+      const classification = result.data as Record<string, unknown>;
+      if (classification.label === "unsubscribe") {
+        const thread = await storage.getThreadById(message.threadId);
+        const lead = thread ? await storage.getLeadById(thread.leadId) : null;
+        if (lead) {
+          await storage.createSuppression({
+            accountId: lead.accountId,
+            email: lead.email,
+            reason: "unsubscribe",
+          });
+        }
+      }
     }
     return { data: result };
   });
@@ -165,5 +177,36 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       tone: body.tone,
     });
     return { data: result };
+  });
+
+  app.post("/suppressions", async (request, reply) => {
+    const body = z.object({ accountId: z.string(), email: z.string().email(), reason: z.string() }).parse(request.body);
+    reply.code(201);
+    return { data: await storage.createSuppression(body) };
+  });
+
+  app.get("/campaigns", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listCampaignsByAccountId(query.accountId) };
+  });
+
+  app.get("/campaigns/:campaignId/stats", async (request) => {
+    const params = z.object({ campaignId: z.string() }).parse(request.params);
+    const enrollments = await storage.listEnrollmentsByCampaignId(params.campaignId);
+    const totals = {
+      enrolled: enrollments.length,
+      active: enrollments.filter((item) => item.state === "active").length,
+      completed: enrollments.filter((item) => item.state === "completed").length,
+      replied: enrollments.filter((item) => item.state === "replied").length,
+      bounced: enrollments.filter((item) => item.state === "bounced").length,
+      unsubscribed: enrollments.filter((item) => item.state === "unsubscribed").length,
+      failed: enrollments.filter((item) => item.state === "failed").length,
+    };
+    return { data: { campaignId: params.campaignId, ...totals } };
+  });
+
+  app.post("/webhooks/providers/:provider", async (request) => {
+    const params = z.object({ provider: z.string() }).parse(request.params);
+    return { data: { accepted: true, provider: params.provider, receivedAt: new Date().toISOString(), payload: request.body } };
   });
 }
