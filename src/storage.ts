@@ -22,6 +22,7 @@ export interface Storage {
 
   createThread(input: Omit<Thread, "id">): Promise<Thread>;
   getThreadById(id: string): Promise<Thread | null>;
+  findThreadByEnrollmentId(enrollmentId: string): Promise<Thread | null>;
 
   createMessage(input: Omit<Message, "id">): Promise<Message>;
   getMessageById(id: string): Promise<Message | null>;

@@ -3,9 +3,11 @@ import type { FastifyInstance } from "fastify";
 import { SchedulerService } from "./scheduler.js";
 import { AiRuntime } from "./ai/runtime.js";
 import type { Storage } from "./storage.js";
+import type { JobQueue } from "./queue/types.js";
+import { verifyWebhookSignature } from "./http/webhooks.js";
 
-export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime }) {
-  const { storage, scheduler, aiRuntime } = deps;
+export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime; queue: JobQueue }) {
+  const { storage, scheduler, aiRuntime, queue } = deps;
 
   app.get("/health", async () => ({ ok: true }));
 
@@ -134,6 +136,12 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
 
   app.post("/ops/scheduler/run", async () => ({ data: await scheduler.runDue() }));
 
+  app.post("/ops/jobs/enqueue", async (request, reply) => {
+    const body = z.object({ kind: z.string(), payload: z.record(z.unknown()).default({}), availableAt: z.string().optional(), maxAttempts: z.number().int().positive().optional() }).parse(request.body);
+    reply.code(201);
+    return { data: await queue.enqueue(body) };
+  });
+
   app.post("/messages/:messageId/classify", async (request) => {
     const params = z.object({ messageId: z.string() }).parse(request.params);
     const message = await storage.getMessageById(params.messageId);
@@ -205,8 +213,38 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     return { data: { campaignId: params.campaignId, ...totals } };
   });
 
-  app.post("/webhooks/providers/:provider", async (request) => {
+  app.post("/webhooks/providers/:provider", async (request, reply) => {
     const params = z.object({ provider: z.string() }).parse(request.params);
-    return { data: { accepted: true, provider: params.provider, receivedAt: new Date().toISOString(), payload: request.body } };
+    const rawBody = typeof request.body === "string" ? request.body : JSON.stringify(request.body ?? {});
+    const signature = request.headers["x-signature"];
+    const secret = process.env.WEBHOOK_SECRET;
+    if (!verifyWebhookSignature(rawBody, typeof signature === "string" ? signature : undefined, secret)) {
+      reply.code(401);
+      return { error: { code: "WEBHOOK_SIGNATURE_INVALID", message: "Invalid webhook signature" } };
+    }
+
+    const payload = z.object({
+      threadId: z.string().optional(),
+      enrollmentId: z.string().optional(),
+      subject: z.string().optional(),
+      bodyText: z.string().optional(),
+      providerMessageId: z.string().optional(),
+    }).passthrough().parse(typeof request.body === "object" && request.body ? request.body : {});
+
+    if (payload.threadId && payload.enrollmentId && payload.subject && payload.bodyText) {
+      await queue.enqueue({
+        kind: "ingest_inbound_message",
+        payload: {
+          threadId: payload.threadId,
+          enrollmentId: payload.enrollmentId,
+          subject: payload.subject,
+          bodyText: payload.bodyText,
+          providerMessageId: payload.providerMessageId,
+          provider: params.provider,
+        },
+      });
+    }
+
+    return { data: { accepted: true, provider: params.provider, receivedAt: new Date().toISOString() } };
   });
 }

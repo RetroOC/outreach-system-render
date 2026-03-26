@@ -31,6 +31,7 @@ export class InMemoryStorage implements Storage {
 
   async createThread(input: Omit<Thread, "id">) { return this.repo.createThread(input); }
   async getThreadById(id: string) { return this.repo.threads.get(id) ?? null; }
+  async findThreadByEnrollmentId(enrollmentId: string) { return Array.from(this.repo.threads.values()).find((item) => item.enrollmentId === enrollmentId) ?? null; }
 
   async createMessage(input: Omit<Message, "id">) { return this.repo.createMessage(input); }
   async getMessageById(id: string) { return this.repo.messages.get(id) ?? null; }

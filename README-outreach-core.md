@@ -33,19 +33,20 @@ npm run dev
 ### With Postgres
 
 1. create a database
-2. apply `db/schema.sql`
-3. set `DATABASE_URL`
+2. set `DATABASE_URL`
+3. run migrations
 4. run the API and worker
 
 ```bash
+npm run migrate
 npm run dev
 npm run dev:worker
 ```
 
 ## Next build steps
 
-1. wire the API from in-memory storage to the Postgres repositories
-2. add job queue and worker processes
-3. add real provider adapters for LLMs
-4. add Gmail / Graph / SMTP connectors
-5. add auth, idempotency, audit logs, and webhooks
+1. add real provider adapters for LLMs
+2. add Gmail / Graph / SMTP connectors
+3. add deeper reply ingestion and provider normalization
+4. add integration tests and deployment packaging
+5. add stronger audit logs and observability

@@ -11,6 +11,7 @@ create type thread_state as enum ('open', 'replied', 'closed');
 create type message_direction as enum ('inbound', 'outbound');
 create type ai_task_name as enum ('reply_classification', 'unsubscribe_detection', 'out_of_office_detection', 'reply_draft', 'personalization_snippet');
 create type ai_run_status as enum ('success', 'failed');
+create type job_status as enum ('pending', 'processing', 'completed', 'failed');
 
 create table if not exists accounts (
   id text primary key,
@@ -175,6 +176,20 @@ create table if not exists ai_runs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists jobs (
+  id text primary key,
+  kind text not null,
+  payload jsonb not null default '{}'::jsonb,
+  status job_status not null default 'pending',
+  attempts integer not null default 0,
+  max_attempts integer not null default 5,
+  available_at timestamptz not null default now(),
+  locked_at timestamptz,
+  completed_at timestamptz,
+  error text,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_inboxes_account_id on inboxes(account_id);
 create index if not exists idx_leads_account_id on leads(account_id);
 create index if not exists idx_campaigns_account_id on campaigns(account_id);
@@ -185,3 +200,4 @@ create index if not exists idx_threads_enrollment_id on threads(enrollment_id);
 create index if not exists idx_messages_thread_id on messages(thread_id);
 create index if not exists idx_messages_enrollment_id on messages(enrollment_id);
 create index if not exists idx_ai_runs_task_name_created_at on ai_runs(task_name, created_at desc);
+create index if not exists idx_jobs_status_available_at on jobs(status, available_at);

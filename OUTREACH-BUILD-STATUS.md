@@ -23,12 +23,12 @@
 
 ## Next outcomes to ship
 
-- [ ] Real queue-backed job system
+- [x] Real queue-backed job system (basic app-owned jobs table + worker runtime)
 - [ ] Real email provider connectors
 - [ ] Real LLM provider adapters
-- [ ] Webhook signature enforcement
-- [ ] Reply ingestion pipeline
-- [ ] Integration tests
+- [x] Webhook signature enforcement
+- [x] Reply ingestion pipeline (basic queued inbound ingestion)
+- [x] Integration-style runtime test coverage (worker flow)
 - [ ] Production deployment files
 - [ ] Containerization / compose
-- [ ] Migrations runner and startup scripts
+- [x] Migrations runner and startup scripts

@@ -52,6 +52,7 @@ export class PostgresStorage implements Storage {
 
   createThread(input: Omit<Thread, "id">) { return this.threads.create(input); }
   getThreadById(id: string) { return this.dbGetThread(id); }
+  findThreadByEnrollmentId(enrollmentId: string) { return this.dbFindThreadByEnrollmentId(enrollmentId); }
 
   createMessage(input: Omit<Message, "id">) { return this.messages.create(input); }
   getMessageById(id: string) { return this.dbGetMessage(id); }
@@ -188,6 +189,20 @@ export class PostgresStorage implements Storage {
 
   private async dbGetThread(id: string): Promise<Thread | null> {
     const result = await this.db.query<any>({ text: `select * from threads where id = $1`, values: [id] });
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      enrollmentId: row.enrollment_id,
+      leadId: row.lead_id,
+      inboxId: row.inbox_id,
+      state: row.state,
+      lastMessageAt: row.last_message_at,
+    };
+  }
+
+  private async dbFindThreadByEnrollmentId(enrollmentId: string): Promise<Thread | null> {
+    const result = await this.db.query<any>({ text: `select * from threads where enrollment_id = $1 limit 1`, values: [enrollmentId] });
     const row = result.rows[0];
     if (!row) return null;
     return {
