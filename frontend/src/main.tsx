@@ -2,141 +2,117 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
 
-type ProofPanel = {
-  id: string;
-  label: string;
-  title: string;
-  subtitle: string;
-  insight: string;
-  metrics: { label: string; value: string }[];
-  notes: string[];
-};
+type NavItem = { label: string; href: string };
+type Feature = { eyebrow: string; title: string; body: string };
+type WorkflowStep = { step: string; title: string; body: string };
+type StoryCard = { id: string; label: string; title: string; summary: string; metrics: { label: string; value: string }[]; bullets: string[] };
+type UseCase = { name: string; title: string; body: string; points: string[] };
 
-type UseCase = {
-  title: string;
-  body: string;
-  badge: string;
-  outcomes: string[];
-};
+const navItems: NavItem[] = [
+  { label: 'Product', href: '#product' },
+  { label: 'Workflow', href: '#workflow' },
+  { label: 'Teams', href: '#teams' },
+  { label: 'Pricing', href: '#pricing' },
+];
 
-const trustLogos = ['Northstar', 'Meridian', 'Stacked', 'Signal Labs', 'Atlas GTM', 'Auxo'];
-
-const breakdownCards = [
+const features: Feature[] = [
   {
-    title: 'Templates flatten the signal',
-    body: 'Most outbound tools treat everyone like the same prospect with a few merge tags attached. The result is generic copy that feels obviously automated.',
+    eyebrow: 'Research-led generation',
+    title: 'The message is only as good as the context behind it.',
+    body: 'Neal turns live signals, fit logic, case proof, and operator judgment into reusable campaign inputs so outbound starts from substance instead of guesswork.',
   },
   {
-    title: 'Research lives in the wrong place',
-    body: 'Context gets scattered across tabs, enrichment tools, notes, and docs — so the actual campaign is built on partial memory instead of grounded inputs.',
+    eyebrow: 'Operator control',
+    title: 'Designed for teams that care what actually gets sent.',
+    body: 'Review states, pacing controls, health indicators, and reply routing stay visible from setup to launch instead of being hidden behind a copy generator.',
   },
   {
-    title: 'Operators lose control at launch',
-    body: 'Without review layers, pacing visibility, and reply routing, quality degrades the moment the campaign leaves strategy and hits live sending.',
+    eyebrow: 'Reusable systems',
+    title: 'Build a repeatable motion without turning the workflow brittle.',
+    body: 'Carry forward frameworks, proof libraries, exclusions, and positioning rules without stacking prompts and disconnected docs across the team.',
   },
 ];
 
-const workflowSteps = [
+const workflow: WorkflowStep[] = [
   {
     step: '01',
     title: 'Collect real context',
-    body: 'Lead lists, hiring signals, firmographics, enrichment, and proof points come together before the first draft exists.',
+    body: 'Lead sources, hiring signals, firmographics, enrichment, and proof points are assembled before copy generation begins.',
   },
   {
     step: '02',
     title: 'Define the angle',
-    body: 'Set persona tension, exclusions, proof, and positioning so every campaign is shaped by strategy instead of prompt improvisation.',
+    body: 'Set persona tension, exclusions, positioning, and proof so every campaign has a clear strategic frame.',
   },
   {
     step: '03',
     title: 'Generate inside guardrails',
-    body: 'Draft tailored outreach with framework-level structure, consistent voice, and clear operator visibility into why each message exists.',
+    body: 'Draft tailored outreach with rationale attached, strong reviewability, and visible constraints for operators.',
   },
   {
     step: '04',
-    title: 'Review and improve live',
-    body: 'Approve campaigns, monitor inbox health, route replies, and refine performance without breaking context across tools.',
+    title: 'Run and refine live',
+    body: 'Approve, launch, route replies, and improve performance without breaking the chain of context across tools.',
   },
 ];
 
-const valueCards = [
+const storyCards: StoryCard[] = [
   {
-    kicker: 'Research-led generation',
-    title: 'Relevant outreach starts with better source material.',
-    body: 'Neal turns signals, proof, and persona logic into reusable campaign inputs so the system drafts from substance instead of guesswork.',
-  },
-  {
-    kicker: 'Operator confidence',
-    title: 'A premium workflow for people who care what gets sent.',
-    body: 'Review states, warnings, pacing controls, and reply operations stay visible throughout the motion — not hidden behind a copy generator.',
-  },
-  {
-    kicker: 'Reusable systems',
-    title: 'Build once, refine continuously.',
-    body: 'Carry forward frameworks, positioning rules, and team-wide playbooks without turning the product into a maze of brittle prompts.',
-  },
-];
-
-const proofPanels: ProofPanel[] = [
-  {
-    id: 'research',
-    label: 'Research cockpit',
-    title: 'See the inputs before the copy.',
-    subtitle: 'Qualification, proof, and timing signals in one command surface.',
-    insight: 'The page feels alive because the product proof is interactive: switch views, inspect details, and see how the system thinks.',
+    id: 'signals',
+    label: 'Signal intelligence',
+    title: 'See why an account belongs in the sequence before writing to it.',
+    summary: 'A live research surface that pulls together fit, timing, champion movement, and proof alignment in one operator view.',
     metrics: [
-      { label: 'High-fit prospects', value: '148' },
-      { label: 'Warnings resolved', value: '23' },
+      { label: 'Qualified accounts', value: '148' },
       { label: 'Proof match score', value: '91%' },
+      { label: 'Warnings resolved', value: '23' },
     ],
-    notes: ['Hiring surge detected', 'Champion changed 19 days ago', 'Relevant proof: 2 RevOps case studies'],
+    bullets: ['Hiring surge detected', 'Champion changed 19 days ago', 'Relevant proof: 2 RevOps case studies'],
   },
   {
-    id: 'sequence',
+    id: 'workbench',
     label: 'Sequence workbench',
-    title: 'Shape the message with context still attached.',
-    subtitle: 'Framework-driven drafting with review states, pacing, and rationale.',
-    insight: 'Instead of a dead mockup, the workbench behaves like a real product window with tabs, metadata, and active states.',
+    title: 'Shape the message while the reasoning stays attached.',
+    summary: 'Drafting, approvals, pacing, and framework logic sit in one deliberate composition rather than in separate tools and tabs.',
     metrics: [
       { label: 'Steps generated', value: '4' },
-      { label: 'Positive reply trend', value: '+31%' },
       { label: 'Approval status', value: 'Ready' },
+      { label: 'Reply trend', value: '+31%' },
     ],
-    notes: ['Framework: trigger → tension → proof', 'Inbox pressure within safe range', 'Reply routing enabled'],
+    bullets: ['Framework: trigger → tension → proof', 'Sending pressure within safe range', 'Review required before launch'],
   },
   {
-    id: 'operations',
+    id: 'ops',
     label: 'Reply operations',
-    title: 'Run the live workflow without losing the thread.',
-    subtitle: 'Classify replies, assign owners, and protect sending quality from the same layer.',
-    insight: 'This anchors the premium SaaS feel: the system is not just for drafting copy — it manages the outbound motion end to end.',
+    title: 'Run the live outbound motion without losing quality control.',
+    summary: 'Classify replies, assign owners, suppress risk, and keep inbox operations tied to the exact campaign context that created them.',
     metrics: [
       { label: 'Threads awaiting route', value: '7' },
       { label: 'Avg. triage time', value: '08m' },
       { label: 'Inbox health', value: 'Stable' },
     ],
-    notes: ['Intent classification active', 'Owner handoff rules applied', 'Suppression changes synced'],
+    bullets: ['Intent classification active', 'Owner handoff rules applied', 'Suppression changes synced'],
   },
 ];
 
 const useCases: UseCase[] = [
   {
-    badge: 'Founders',
+    name: 'Founders',
     title: 'Launch targeted outbound without building a brittle stack.',
-    body: 'Use Neal to move from raw lead sources to credible outreach faster, while keeping message quality high from the start.',
-    outcomes: ['Sharper first campaigns', 'Less manual research drag', 'Clearer positioning discipline'],
+    body: 'Move from rough lead sources to credible outreach quickly while keeping quality high from the first campaign onward.',
+    points: ['Sharper first campaigns', 'Less manual research drag', 'Clearer positioning discipline'],
   },
   {
-    badge: 'RevOps teams',
-    title: 'Standardize quality across operators and inboxes.',
-    body: 'Keep fit checks, frameworks, pacing, and reply handling consistent as more people touch the outbound machine.',
-    outcomes: ['Shared campaign logic', 'Safer launch controls', 'Less performance drift'],
+    name: 'RevOps teams',
+    title: 'Standardize quality across operators, inboxes, and campaigns.',
+    body: 'Keep fit checks, message frameworks, pacing, and reply handling consistent as more people touch the motion.',
+    points: ['Shared campaign logic', 'Safer launch controls', 'Less performance drift'],
   },
   {
-    badge: 'Agencies',
+    name: 'Agencies',
     title: 'Deliver premium outbound execution clients can actually trust.',
-    body: 'Give every account a research-backed workflow, cleaner approvals, and more confidence in what reaches the inbox.',
-    outcomes: ['Faster client review', 'Reusable proof systems', 'Higher-quality deliverables'],
+    body: 'Give every account a research-backed workflow, cleaner approvals, and a more convincing operational surface.',
+    points: ['Faster client review', 'Reusable proof systems', 'Higher-quality deliverables'],
   },
 ];
 
@@ -158,6 +134,8 @@ const testimonials = [
   },
 ];
 
+const logos = ['Northstar', 'Meridian', 'Atlas GTM', 'Signal Labs', 'Auxo', 'Stacked'];
+
 function useReveal() {
   React.useEffect(() => {
     const items = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
@@ -167,7 +145,7 @@ function useReveal() {
           if (entry.isIntersecting) entry.target.classList.add('revealed');
         });
       },
-      { threshold: 0.16 }
+      { threshold: 0.14 }
     );
 
     items.forEach((item) => observer.observe(item));
@@ -176,260 +154,245 @@ function useReveal() {
 }
 
 function App() {
-  const [activePanel, setActivePanel] = React.useState(proofPanels[0].id);
+  const [activeStory, setActiveStory] = React.useState(storyCards[0].id);
   const [activeUseCase, setActiveUseCase] = React.useState(0);
-  const currentPanel = proofPanels.find((panel) => panel.id === activePanel) ?? proofPanels[0];
+  const currentStory = storyCards.find((item) => item.id === activeStory) ?? storyCards[0];
 
   useReveal();
 
-  React.useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActivePanel((current) => {
-        const index = proofPanels.findIndex((panel) => panel.id === current);
-        return proofPanels[(index + 1) % proofPanels.length].id;
-      });
-    }, 6000);
-    return () => window.clearInterval(timer);
-  }, []);
-
   return (
-    <div className="page-shell">
-      <div className="ambient ambient-a" />
-      <div className="ambient ambient-b" />
+    <div className="site-shell">
+      <div className="orb orb-a" />
+      <div className="orb orb-b" />
 
-      <header className="site-nav">
-        <a className="brand" href="#top">
+      <header className="topbar">
+        <a className="brand" href="#top" aria-label="Neal home">
           <span className="brand-mark">N</span>
-          <span className="brand-copy">
+          <span className="brand-text">
             <strong>Neal</strong>
             <em>Research-led outreach infrastructure</em>
           </span>
         </a>
-        <nav className="nav-links">
-          <a href="#product">Product</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#use-cases">Use cases</a>
-          <a href="#pricing">Pricing</a>
+
+        <nav className="nav">
+          {navItems.map((item) => (
+            <a key={item.label} href={item.href}>
+              {item.label}
+            </a>
+          ))}
         </nav>
-        <div className="nav-actions">
-          <a className="text-link" href="#footer">Login</a>
-          <a className="button primary" href="#final-cta">Book demo</a>
+
+        <div className="topbar-actions">
+          <a className="ghost-link" href="#footer">
+            Login
+          </a>
+          <a className="button button-primary" href="#cta">
+            Book demo
+          </a>
         </div>
       </header>
 
-      <main className="landing" id="top">
-        <section className="hero section reveal" data-reveal>
+      <main className="page" id="top">
+        <section className="hero-panel reveal" data-reveal>
           <div className="hero-copy">
             <div className="eyebrow">Premium outbound systems for quality-led teams</div>
             <h1>
-              Relevant outreach, built from <span>real research</span> — not templates.
+              Relevant outreach built from <span>real research</span>, not templates.
             </h1>
-            <p className="lede">
-              Neal turns live buying signals, persona logic, proof, and review controls into one elegant outbound operating layer. The result is messaging that feels deliberate — and a workflow operators can actually trust.
+            <p className="hero-lede">
+              Neal gives serious GTM teams one elegant operating layer for signal capture, message strategy, approvals, inbox health, and live reply operations.
             </p>
+
             <div className="hero-actions">
-              <a className="button primary large" href="#pricing">Start with a pilot</a>
-              <a className="button secondary large" href="#product-proof">See product proof</a>
+              <a className="button button-primary button-large" href="#pricing">
+                Start with a pilot
+              </a>
+              <a className="button button-secondary button-large" href="#product">
+                See product story
+              </a>
             </div>
-            <div className="hero-stats">
-              <Stat value="2.7×" label="faster campaign setup once research is centralized" />
-              <Stat value="31%" label="higher positive reply rate on tightly reviewed campaigns" />
-              <Stat value="3/3" label="healthy inboxes visible in one operator view" />
+
+            <div className="hero-proof-row">
+              <div className="mini-proof">
+                <strong>2.7×</strong>
+                <span>faster campaign setup once research is centralized</span>
+              </div>
+              <div className="mini-proof">
+                <strong>31%</strong>
+                <span>higher positive reply rate on tightly reviewed campaigns</span>
+              </div>
+              <div className="mini-proof">
+                <strong>End-to-end</strong>
+                <span>research, drafting, approvals, and reply handling in one system</span>
+              </div>
             </div>
           </div>
 
-          <div className="hero-visual">
-            <div className="floating-tags">
-              <span className="tag active">Hiring surge</span>
-              <span className="tag">Champion change</span>
-              <span className="tag">Funding event</span>
-            </div>
-
-            <div className="window hero-window main-window">
-              <WindowChrome title="Campaign intelligence" />
-              <div className="window-body">
-                <div className="mini-grid">
-                  <Metric value="2,431" label="Qualified leads" />
-                  <Metric value="112" label="Safe suppressions" />
-                  <Metric value="38" label="Positive replies" />
-                  <Metric value="Ready" label="Launch state" />
-                </div>
-                <div className="message-preview">
-                  <div className="pill-row">
-                    <span className="pill">Research complete</span>
-                    <span className="pill">Framework locked</span>
-                    <span className="pill">Inbox safe</span>
+          <div className="hero-stage">
+            <div className="hero-stack">
+              <div className="product-frame frame-primary">
+                <FrameHeader title="Outbound control tower" label="Live campaign" />
+                <div className="frame-grid">
+                  <div className="data-cluster wide">
+                    <span className="cluster-label">Campaign thesis</span>
+                    <p>
+                      Northstar is hiring four SDRs while headcount stays flat in RevOps — strong indicator that process strain is rising before pipeline quality does.
+                    </p>
                   </div>
-                  <p>
-                    “Northstar’s SDR hiring burst usually means RevOps is about to absorb more process load. Neal helps teams improve personalization quality without adding manual research overhead.”
-                  </p>
+                  <StatCard value="2,431" label="Qualified leads" />
+                  <StatCard value="112" label="Safe suppressions" />
+                  <StatCard value="Ready" label="Launch state" />
+                  <StatCard value="38" label="Positive replies" />
                 </div>
               </div>
-            </div>
 
-            <div className="stacked-shot shot-left">
-              <WindowChrome title="Lead queue" compact />
-              <div className="stacked-list">
-                <Lead name="Maya Chen" meta="high fit · hiring 4 SDRs" selected />
-                <Lead name="Jonas Weber" meta="benchmark angle · ready" />
-                <Lead name="Clara Rossi" meta="proof missing · hold" muted />
+              <div className="product-frame frame-secondary left">
+                <FrameHeader title="Signal queue" label="Priority" compact />
+                <div className="list-card">
+                  <QueueRow name="Maya Chen" meta="high fit · hiring surge" strong />
+                  <QueueRow name="Jonas Weber" meta="champion changed · ready" />
+                  <QueueRow name="Clara Rossi" meta="proof missing · hold" muted />
+                </div>
               </div>
-            </div>
 
-            <div className="stacked-shot shot-right">
-              <WindowChrome title="Reply routing" compact />
-              <div className="reply-box">
-                <span className="route">Intent: interested</span>
-                <strong>7 threads need routing</strong>
-                <p>Assign owner, draft next step, and protect sending quality from the same surface.</p>
+              <div className="product-frame frame-secondary right">
+                <FrameHeader title="Reply routing" label="Ops" compact />
+                <div className="ops-card">
+                  <span className="intent-pill">Intent: interested</span>
+                  <strong>7 threads need routing</strong>
+                  <p>Assign owner, draft the next step, and protect sending quality from the same surface.</p>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="trust-band section reveal" data-reveal>
+        <section className="trust-strip reveal" data-reveal>
           <div>
-            <div className="eyebrow">Trusted by serious GTM operators</div>
+            <div className="eyebrow subtle">Trusted by serious GTM operators</div>
             <p>
-              Built for founders, revenue teams, and agencies who need outbound to feel thoughtful in the inbox and controlled behind the scenes.
+              Built for founders, revenue teams, and agencies that need outbound to feel credible in the inbox and controlled behind the scenes.
             </p>
           </div>
-          <div className="trust-logos">
-            {trustLogos.map((logo) => (
+          <div className="logo-row">
+            {logos.map((logo) => (
               <span key={logo}>{logo}</span>
             ))}
           </div>
         </section>
 
-        <section className="problem section reveal" data-reveal>
-          <div className="section-heading">
-            <div className="eyebrow">The problem</div>
-            <h2>Most outbound systems optimize for throughput. The best teams need relevance, reviewability, and control.</h2>
+        <section className="editorial-band reveal" data-reveal>
+          <div className="section-intro split-intro">
+            <div>
+              <div className="eyebrow">Why Neal exists</div>
+              <h2>Most outbound systems optimize for throughput. The best teams need relevance, reviewability, and control.</h2>
+            </div>
             <p>
-              When research is weak, the message gets generic. When execution is fragmented, quality slips at launch. Neal is built to solve both problems at once.
+              When research is weak, the message gets generic. When execution is fragmented, quality slips at launch. Neal is built to solve both problems at the same time.
             </p>
           </div>
-          <div className="problem-shot window editorial-shot">
-            <WindowChrome title="Message audit" />
-            <div className="audit-grid">
-              <div className="audit-card danger">
-                <strong>Generic template</strong>
-                <p>Low-signal intro. No specific trigger. Weak proof alignment.</p>
-              </div>
-              <div className="audit-card success">
-                <strong>Research-shaped draft</strong>
-                <p>Hiring context, persona tension, and relevant case proof all present before send.</p>
-              </div>
-            </div>
+
+          <div className="contrast-showcase">
+            <article className="contrast-card muted-card">
+              <span>Generic template</span>
+              <strong>Low-signal intro. Weak proof. Easy to ignore.</strong>
+              <p>Most tools generate passable copy over incomplete context and hope volume covers the quality problem.</p>
+            </article>
+            <article className="contrast-card accent-card">
+              <span>Research-shaped draft</span>
+              <strong>Specific trigger, clear tension, relevant proof, visible review state.</strong>
+              <p>Neal keeps the source material, strategic angle, and operator guardrails attached all the way to send.</p>
+            </article>
           </div>
         </section>
 
-        <section className="breakdown section reveal" data-reveal>
-          {breakdownCards.map((card, index) => (
-            <article className="breakdown-card" key={card.title} style={{ animationDelay: `${index * 80}ms` }}>
-              <span className="card-index">0{index + 1}</span>
-              <h3>{card.title}</h3>
-              <p>{card.body}</p>
+        <section className="feature-grid reveal" data-reveal>
+          {features.map((feature) => (
+            <article className="feature-card" key={feature.title}>
+              <span className="eyebrow subtle">{feature.eyebrow}</span>
+              <h3>{feature.title}</h3>
+              <p>{feature.body}</p>
             </article>
           ))}
         </section>
 
-        <section className="how-it-works section reveal" data-reveal id="how-it-works">
-          <div className="section-heading narrow">
+        <section className="workflow-section reveal" data-reveal id="workflow">
+          <div className="section-intro narrow">
             <div className="eyebrow">How it works</div>
             <h2>A better outbound motion starts before the first draft exists.</h2>
           </div>
-          <div className="workflow-grid">
-            {workflowSteps.map((step) => (
-              <article className="workflow-card" key={step.step}>
-                <span className="step-no">{step.step}</span>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
+
+          <div className="workflow-rail">
+            {workflow.map((item) => (
+              <article className="workflow-step" key={item.step}>
+                <span className="step-index">{item.step}</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="value-section section reveal" data-reveal id="product">
-          <div className="section-heading">
-            <div className="eyebrow">Product value</div>
-            <h2>One system for signal capture, copy quality, and operator control.</h2>
+        <section className="product-story reveal" data-reveal id="product">
+          <div className="section-intro story-intro">
+            <div>
+              <div className="eyebrow">Product story</div>
+              <h2>Not a brochure mockup — a product narrative with real states, pacing, and operational depth.</h2>
+            </div>
             <p>
-              Neal brings together the parts that usually live in separate tools: qualification, positioning logic, generation, approvals, inbox health, and reply operations.
+              Move through the workflow and see how Neal handles research, drafting, and live operations in one coherent interface system.
             </p>
           </div>
-          <div className="value-layout">
-            <div className="value-cards">
-              {valueCards.map((card) => (
-                <article className="value-card" key={card.title}>
-                  <span className="eyebrow small">{card.kicker}</span>
-                  <h3>{card.title}</h3>
-                  <p>{card.body}</p>
-                </article>
-              ))}
-            </div>
-            <div className="window value-shot">
-              <WindowChrome title="Campaign setup" />
-              <div className="setup-panel">
-                <div className="setup-step done"><span>Lead source connected</span><em>Done</em></div>
-                <div className="setup-step active"><span>Persona logic configured</span><em>Active</em></div>
-                <div className="setup-step"><span>Proof matched to segment</span><em>Waiting</em></div>
-                <div className="setup-step dim"><span>Generation unlocked</span><em>Pending</em></div>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="proof section reveal" data-reveal id="product-proof">
-          <div className="proof-copy">
-            <div className="eyebrow">Workflow / product proof</div>
-            <h2>Screenshot-heavy, interactive, and grounded in a real workflow.</h2>
-            <p>
-              Switch between product states to explore how Neal handles research, drafting, and live reply operations. The page should feel like a living product, not a static brochure.
-            </p>
-            <div className="proof-tabs">
-              {proofPanels.map((panel) => (
+          <div className="story-layout">
+            <div className="story-nav">
+              {storyCards.map((item) => (
                 <button
-                  key={panel.id}
-                  className={panel.id === activePanel ? 'proof-tab active' : 'proof-tab'}
-                  onClick={() => setActivePanel(panel.id)}
+                  key={item.id}
+                  className={item.id === activeStory ? 'story-tab active' : 'story-tab'}
+                  onClick={() => setActiveStory(item.id)}
                 >
-                  {panel.label}
+                  <span>{item.label}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.summary}</p>
                 </button>
               ))}
             </div>
-            <div className="insight-box">
-              <strong>{currentPanel.title}</strong>
-              <p>{currentPanel.insight}</p>
-            </div>
-          </div>
 
-          <div className="proof-stage">
-            <div className="window product-window interactive-window">
-              <WindowChrome title={currentPanel.label} />
-              <div className="product-body">
-                <div className="product-sidebar">
-                  <span className="eyebrow small">{currentPanel.subtitle}</span>
-                  <ul>
-                    {currentPanel.notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="product-canvas">
-                  <div className="canvas-header">
-                    <strong>{currentPanel.title}</strong>
-                    <span className="live-dot">Live view</span>
-                  </div>
-                  <div className="canvas-metrics">
-                    {currentPanel.metrics.map((metric) => (
-                      <Metric key={metric.label} value={metric.value} label={metric.label} />
-                    ))}
-                  </div>
-                  <div className="canvas-card-stack">
-                    <div className="canvas-card large" />
-                    <div className="canvas-card medium" />
-                    <div className="canvas-card small" />
+            <div className="story-stage">
+              <div className="product-frame story-frame">
+                <FrameHeader title={currentStory.label} label="Operator view" />
+                <div className="story-body">
+                  <aside className="story-sidebar">
+                    <div>
+                      <span className="sidebar-kicker">Current state</span>
+                      <h3>{currentStory.title}</h3>
+                    </div>
+                    <ul>
+                      {currentStory.bullets.map((bullet) => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                  </aside>
+
+                  <div className="story-canvas">
+                    <div className="story-metrics">
+                      {currentStory.metrics.map((metric) => (
+                        <StatCard key={metric.label} value={metric.value} label={metric.label} />
+                      ))}
+                    </div>
+
+                    <div className="canvas-shell">
+                      <div className="canvas-topline">
+                        <strong>{currentStory.summary}</strong>
+                        <span className="live-state">Live view</span>
+                      </div>
+                      <div className="canvas-panels">
+                        <div className="canvas-panel tall" />
+                        <div className="canvas-panel short" />
+                        <div className="canvas-panel short dim" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -437,44 +400,50 @@ function App() {
           </div>
         </section>
 
-        <section className="use-cases section reveal" data-reveal id="use-cases">
-          <div className="section-heading narrow">
-            <div className="eyebrow">Use cases</div>
-            <h2>Built for teams that treat outbound like an operating discipline.</h2>
+        <section className="teams-section reveal" data-reveal id="teams">
+          <div className="section-intro split-intro">
+            <div>
+              <div className="eyebrow">Who it is for</div>
+              <h2>Built for teams that treat outbound like an operating discipline.</h2>
+            </div>
+            <p>
+              Different teams use Neal differently, but the value stays the same: better source material, more control, and stronger consistency.
+            </p>
           </div>
-          <div className="use-case-layout">
-            <div className="use-case-tabs">
+
+          <div className="teams-layout">
+            <div className="team-tabs">
               {useCases.map((item, index) => (
                 <button
-                  key={item.title}
-                  className={index === activeUseCase ? 'use-case-tab active' : 'use-case-tab'}
+                  key={item.name}
+                  className={index === activeUseCase ? 'team-tab active' : 'team-tab'}
                   onClick={() => setActiveUseCase(index)}
                 >
-                  <span>{item.badge}</span>
+                  <span>{item.name}</span>
                   <strong>{item.title}</strong>
                 </button>
               ))}
             </div>
-            <div className="window use-case-shot">
-              <WindowChrome title={useCases[activeUseCase].badge} />
-              <div className="use-case-detail">
-                <h3>{useCases[activeUseCase].title}</h3>
-                <p>{useCases[activeUseCase].body}</p>
-                <ul>
-                  {useCases[activeUseCase].outcomes.map((outcome) => (
-                    <li key={outcome}>{outcome}</li>
-                  ))}
-                </ul>
-              </div>
+
+            <div className="team-detail">
+              <span className="eyebrow subtle">{useCases[activeUseCase].name}</span>
+              <h3>{useCases[activeUseCase].title}</h3>
+              <p>{useCases[activeUseCase].body}</p>
+              <ul>
+                {useCases[activeUseCase].points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
 
-        <section className="testimonials section reveal" data-reveal>
-          <div className="section-heading narrow">
-            <div className="eyebrow">Proof / testimonials</div>
+        <section className="testimonial-section reveal" data-reveal>
+          <div className="section-intro narrow">
+            <div className="eyebrow">Social proof</div>
             <h2>High-signal teams use Neal when quality matters more than vanity volume.</h2>
           </div>
+
           <div className="testimonial-grid">
             {testimonials.map((item) => (
               <article className="testimonial-card" key={item.author}>
@@ -488,99 +457,109 @@ function App() {
           </div>
         </section>
 
-        <section className="pricing section reveal" data-reveal id="pricing">
+        <section className="pricing-section reveal" data-reveal id="pricing">
           <div className="pricing-copy">
-            <div className="eyebrow">Pricing teaser</div>
+            <div className="eyebrow">Pricing</div>
             <h2>Start with a pilot. Expand once the workflow proves itself.</h2>
             <p>
               Bring one campaign, one persona set, and one operator team. Neal is designed to earn its place quickly before you scale the motion further.
             </p>
           </div>
-          <div className="pricing-card">
-            <span className="eyebrow small">Pilot</span>
-            <div className="price">From €490<span>/month</span></div>
+
+          <div className="pricing-card premium-card">
+            <span className="eyebrow subtle">Pilot</span>
+            <div className="price-row">
+              <strong>From €490</strong>
+              <span>/month</span>
+            </div>
             <ul>
               <li>Research-led campaign setup</li>
               <li>Persona and proof configuration</li>
-              <li>Sequence workbench + approvals</li>
+              <li>Sequence workbench with approvals</li>
               <li>Inbox and reply operations layer</li>
             </ul>
-            <a className="button primary full" href="#final-cta">Request access</a>
+            <a className="button button-primary button-large full-width" href="#cta">
+              Request access
+            </a>
           </div>
         </section>
 
-        <section className="final-cta section reveal" data-reveal id="final-cta">
+        <section className="cta-section reveal" data-reveal id="cta">
           <div>
             <div className="eyebrow">Final CTA</div>
             <h2>If your outbound matters, the system behind it should too.</h2>
-            <p>Stop stitching together research tabs, prompt experiments, and sequencing tools. Run the motion from one premium operating layer.</p>
+            <p>
+              Stop stitching together research tabs, prompt experiments, and sequencing tools. Run the motion from one premium operating layer.
+            </p>
           </div>
           <div className="hero-actions">
-            <a className="button primary large" href="#top">Book demo</a>
-            <a className="button secondary large" href="#product">Explore product</a>
+            <a className="button button-primary button-large" href="#top">
+              Book demo
+            </a>
+            <a className="button button-secondary button-large" href="#product">
+              Explore product
+            </a>
           </div>
         </section>
       </main>
 
-      <footer className="footer section" id="footer">
+      <footer className="footer" id="footer">
         <div className="footer-brand">
           <a className="brand" href="#top">
             <span className="brand-mark">N</span>
-            <span className="brand-copy">
+            <span className="brand-text">
               <strong>Neal</strong>
               <em>Research-led outreach infrastructure</em>
             </span>
           </a>
           <p>Premium outbound systems for founders, RevOps teams, and agencies that care what gets sent.</p>
         </div>
-        <div className="footer-links">
-          <a href="#product">Product</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#use-cases">Use cases</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#top">Login</a>
-          <a href="#final-cta">Book demo</a>
+
+        <div className="footer-columns">
+          <div>
+            <span>Explore</span>
+            <a href="#product">Product</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#teams">Teams</a>
+          </div>
+          <div>
+            <span>Company</span>
+            <a href="#pricing">Pricing</a>
+            <a href="#cta">Book demo</a>
+            <a href="#top">Login</a>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
-function WindowChrome({ title, compact }: { title: string; compact?: boolean }) {
+function FrameHeader({ title, label, compact }: { title: string; label: string; compact?: boolean }) {
   return (
-    <div className={compact ? 'window-chrome compact' : 'window-chrome'}>
-      <div className="window-dots">
+    <div className={compact ? 'frame-header compact' : 'frame-header'}>
+      <div className="header-dots">
         <span />
         <span />
         <span />
       </div>
       <strong>{title}</strong>
-      <em>{compact ? 'Live' : 'Operator view'}</em>
+      <em>{label}</em>
     </div>
   );
 }
 
-function Metric({ value, label }: { value: string; label: string }) {
+function StatCard({ value, label }: { value: string; label: string }) {
   return (
-    <div className="metric-tile">
+    <div className="stat-card">
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function QueueRow({ name, meta, strong, muted }: { name: string; meta: string; strong?: boolean; muted?: boolean }) {
   return (
-    <div className="hero-stat">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function Lead({ name, meta, selected, muted }: { name: string; meta: string; selected?: boolean; muted?: boolean }) {
-  return (
-    <div className={muted ? 'lead-row muted' : selected ? 'lead-row selected' : 'lead-row'}>
+    <div className={muted ? 'queue-row muted' : strong ? 'queue-row active' : 'queue-row'}>
       <strong>{name}</strong>
       <span>{meta}</span>
     </div>
