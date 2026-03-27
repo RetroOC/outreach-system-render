@@ -6,20 +6,40 @@ type Screen = { id: string; eyebrow: string; label: string };
 
 const screens: Screen[] = [
   { id: 'landing', eyebrow: 'Marketing', label: 'Landing page' },
-  { id: 'auth', eyebrow: 'Access', label: 'Auth screen' },
-  { id: 'onboarding', eyebrow: 'Setup', label: 'Onboarding states' },
-  { id: 'import', eyebrow: 'Setup', label: 'Import + mapping states' },
-  { id: 'persona', eyebrow: 'Setup', label: 'Persona setup states' },
-  { id: 'generation', eyebrow: 'AI', label: 'Generation states' },
-  { id: 'workbench', eyebrow: 'Editor', label: 'Sequence workbench' },
-  { id: 'overlay', eyebrow: 'Editor', label: 'Modal + dropdown states' },
-  { id: 'system', eyebrow: 'UI system', label: 'Empty / success / error' },
+  { id: 'workbench', eyebrow: 'Product', label: 'Sequence workbench' },
+  { id: 'onboarding', eyebrow: 'Product', label: 'Onboarding' },
+  { id: 'system', eyebrow: 'System', label: 'UI states' },
 ];
 
-const navMetrics = [
-  { label: 'Coverage', value: '9 views', detail: 'All key product states surfaced' },
-  { label: 'Style', value: 'Mono', detail: 'Black / white / gray first' },
-  { label: 'Intent', value: 'Reviewable', detail: 'Screenshot-ready over full wiring' },
+const shellStats = [
+  { label: 'Pipeline coverage', value: 'Research → send → reply', detail: 'One system from acquisition to operator review' },
+  { label: 'Positioning', value: 'Premium outbound ops', detail: 'Built for quality-led GTM teams, not spray-and-pray volume' },
+  { label: 'Visual direction', value: 'Dark editorial SaaS', detail: 'Layered charcoal surfaces, disciplined type, deliberate spacing' },
+];
+
+const trustLogos = ['northstar', 'clay teams', 'signal labs', 'meridian', 'stacked', 'auxo'];
+
+const workflowSteps = [
+  {
+    step: '01',
+    title: 'Capture the real signal',
+    body: 'Bring in lead lists, trigger events, hiring signals, firmographic filters, and enrichment data before a single line gets drafted.',
+  },
+  {
+    step: '02',
+    title: 'Shape the angle',
+    body: 'Define persona, pain, proof, and exclusions so the system knows what should be said — and what should never be sent.',
+  },
+  {
+    step: '03',
+    title: 'Generate with guardrails',
+    body: 'Create tailored sequences with a clear framework, grounded proof, deliverability awareness, and human-readable copy.',
+  },
+  {
+    step: '04',
+    title: 'Review, route, improve',
+    body: 'Approve messages, monitor inbox health, classify replies, and continuously tighten campaigns without losing context.',
+  },
 ];
 
 function App() {
@@ -28,59 +48,62 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="rail">
-        <div>
+        <div className="rail-brand">
           <div className="brand-mark">N</div>
-          <div className="brand-title">Neal Outreach</div>
-          <div className="brand-subtitle">Research-led outbound control room</div>
+          <div>
+            <div className="brand-title">Neal</div>
+            <div className="brand-subtitle">Research-led outreach infrastructure</div>
+          </div>
         </div>
 
         <nav className="screen-nav">
           {screens.map((screen) => (
-            <button key={screen.id} className={screen.id === active ? 'screen-link active' : 'screen-link'} onClick={() => setActive(screen.id)}>
+            <button
+              key={screen.id}
+              className={screen.id === active ? 'screen-link active' : 'screen-link'}
+              onClick={() => setActive(screen.id)}
+            >
               <span>{screen.eyebrow}</span>
               <strong>{screen.label}</strong>
             </button>
           ))}
         </nav>
 
-        <div className="rail-footer">
+        <div className="rail-note">
           <div className="tiny-label">Direction</div>
-          <p>Minimal premium SaaS, serious GTM posture, cohesive from landing through operator workbench.</p>
+          <p>
+            Premium, dense, controlled. The landing page sells an operating philosophy, and the product surfaces inherit the same taste.
+          </p>
         </div>
       </aside>
 
       <main className="stage">
         <header className="stage-header">
           <div>
-            <div className="tiny-label">Frontend prototype</div>
+            <div className="tiny-label">Frontend overhaul</div>
             <h1>{screens.find((screen) => screen.id === active)?.label}</h1>
           </div>
           <div className="header-actions">
-            <button className="ghost-button">Review system</button>
-            <button className="primary-button">Open live view</button>
+            <button className="ghost-button">System notes</button>
+            <button className="primary-button">Review live view</button>
           </div>
         </header>
 
         <section className="metrics-row">
-          {navMetrics.map((metric) => (
-            <div className="metric-card" key={metric.label}>
-              <div className="metric-label">{metric.label}</div>
-              <div className="metric-value">{metric.value}</div>
-              <div className="metric-detail">{metric.detail}</div>
+          {shellStats.map((stat) => (
+            <div className="metric-card" key={stat.label}>
+              <div className="metric-label">{stat.label}</div>
+              <div className="metric-value">{stat.value}</div>
+              <div className="metric-detail">{stat.detail}</div>
             </div>
           ))}
         </section>
 
         <div className="screen-frame">
           {active === 'landing' && <LandingPage />}
-          {active === 'auth' && <AuthScreen />}
-          {active === 'onboarding' && <OnboardingStates />}
-          {active === 'import' && <ImportStates />}
-          {active === 'persona' && <PersonaStates />}
-          {active === 'generation' && <GenerationStates />}
-          {active === 'workbench' && <WorkbenchStates />}
-          {active === 'overlay' && <OverlayStates />}
-          {active === 'system' && <SystemStates />}
+          {active === 'workbench' && <WorkbenchScreen />}
+          {active === 'onboarding' && <OnboardingScreen />}
+          {active === 'system' && <SystemScreen />}
         </div>
       </main>
     </div>
@@ -89,384 +112,429 @@ function App() {
 
 function LandingPage() {
   return (
-    <div className="landing-shell">
-      <section className="hero-panel">
-        <div className="hero-copy">
-          <div className="eyebrow-pill">Research-led outreach infrastructure</div>
-          <h2>Outbound for operators who care what gets sent.</h2>
-          <p>
-            Neal gives GTM teams a single environment for lead intake, persona definition, sequence construction, inbox control, and reply handling — with the posture of an internal research desk, not a volume machine.
-          </p>
-          <div className="row-actions">
-            <button className="primary-button">Request operator access</button>
-            <button className="ghost-button">View product flow</button>
+    <div className="landing-page">
+      <section className="marketing-nav">
+        <div className="marketing-brand">
+          <div className="brand-mark inverse">N</div>
+          <div>
+            <strong>Neal</strong>
+            <span>Research-led outreach infrastructure</span>
           </div>
         </div>
-        <div className="hero-card-stack">
-          <div className="hero-card large">
-            <div className="tiny-label">Sequence quality</div>
-            <strong>Signal-based structure. Human-readable copy. Tight operational control.</strong>
-            <div className="hero-grid">
-              <StatPill label="Positive replies" value="38" />
-              <StatPill label="Healthy inboxes" value="3 / 3" />
-              <StatPill label="Suppressed safely" value="112" />
+        <div className="marketing-links">
+          <a href="#product">Product</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#proof">Proof</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div className="marketing-actions">
+          <button className="ghost-button dark">Book demo</button>
+          <button className="primary-button light">Start free pilot</button>
+        </div>
+      </section>
+
+      <section className="hero-section">
+        <div className="hero-copy-block">
+          <div className="eyebrow-pill dark">Outbound systems for teams that care what gets sent</div>
+          <h2>
+            Replace generic sequencing with <span>research-shaped outreach</span> that feels deliberate.
+          </h2>
+          <p className="hero-body">
+            Neal turns raw lead lists, buying signals, persona context, proof points, and inbox controls into one coherent outbound operating system.
+            The result is sharper messaging, calmer execution, and campaigns that feel like they were built by disciplined operators — not prompt roulette.
+          </p>
+          <div className="hero-actions">
+            <button className="primary-button light large">Start free pilot</button>
+            <button className="ghost-button dark large">See the operator workflow</button>
+          </div>
+          <div className="hero-proof-inline">
+            <div>
+              <strong>2.7×</strong>
+              <span>faster campaign launch after research is centralized</span>
+            </div>
+            <div>
+              <strong>31%</strong>
+              <span>higher positive reply rate on tightly reviewed campaigns</span>
             </div>
           </div>
-          <div className="hero-card small muted-panel">
-            <span className="tiny-label">Built for</span>
-            <strong>Outbound operators, RevOps teams, founders running high-stakes campaigns</strong>
+        </div>
+
+        <div className="hero-visual">
+          <div className="signal-strip">
+            <div className="signal-chip active">Hiring surge</div>
+            <div className="signal-chip">Champion change</div>
+            <div className="signal-chip">Funding event</div>
+          </div>
+
+          <div className="hero-orbit-card primary-surface">
+            <div className="surface-topline">
+              <span className="tiny-label">Campaign intelligence</span>
+              <div className="status-chip success">Ready to launch</div>
+            </div>
+            <h3>Sequence quality comes from structure, not volume.</h3>
+            <p>
+              Neal assembles relevant facts, ICP fit, pain-point framing, social proof, and guardrails before the copy engine starts drafting.
+            </p>
+            <div className="hero-stat-grid">
+              <StatTile label="Qualified leads" value="2,431" />
+              <StatTile label="Safe suppressions" value="112" />
+              <StatTile label="Healthy inboxes" value="3 / 3" />
+              <StatTile label="Positive replies" value="38" />
+            </div>
+          </div>
+
+          <div className="hero-orbit-card secondary-surface compact">
+            <div className="surface-topline">
+              <span className="tiny-label">Live draft note</span>
+              <span className="mini-kicker">Framework: trigger → tension → proof</span>
+            </div>
+            <p>
+              “Northstar’s SDR hiring burst usually means RevOps is about to absorb process strain. We help teams tighten personalization quality without adding manual research overhead.”
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="landing-grid three">
-        <FeatureCard title="Lead intake with discipline" body="Import, map, validate, and segment leads before they touch a sequence." />
-        <FeatureCard title="Persona-first sequence design" body="Build around buyer context, triggers, proof, and exclusions instead of copy templates." />
-        <FeatureCard title="Reply handling that closes the loop" body="Classify, draft, and route replies without losing operational state." />
-      </section>
-
-      <section className="landing-grid two">
-        <div className="feature-panel deep">
-          <div className="tiny-label">Operator workflow</div>
-          <h3>Setup → map → define persona → generate → refine → ship</h3>
-          <p>The product is opinionated about sequence quality and calm control. Every major state is visible, from empty and loading to partially configured and at-risk.</p>
-        </div>
-        <div className="feature-panel">
-          <div className="tiny-label">Why it feels different</div>
-          <ul className="detail-list compact-list">
-            <li><span>Interface</span><strong>Quiet, structured, premium</strong></li>
-            <li><span>Workflow</span><strong>Research before generation</strong></li>
-            <li><span>Safety</span><strong>Suppression, inbox pacing, auditability</strong></li>
-            <li><span>Audience</span><strong>Serious GTM teams, not spray-and-pray senders</strong></li>
-          </ul>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AuthScreen() {
-  return (
-    <div className="center-stage">
-      <div className="center-card auth-card split-card">
+      <section className="trust-band">
         <div>
-          <div className="eyebrow-pill">Workspace access</div>
-          <h2>Enter the control room.</h2>
-          <p>Secure access for campaign operators, founders, and RevOps leads running live sending infrastructure.</p>
-          <div className="input-stack">
-            <label>Work email<input value="gershon@neal.systems" readOnly /></label>
-            <label>Password<input value="••••••••••••" readOnly /></label>
-          </div>
-          <div className="row-actions">
-            <button className="ghost-button">Use Google SSO</button>
-            <button className="primary-button">Sign in</button>
+          <div className="tiny-label">Built for serious GTM execution</div>
+          <p>
+            Used by founders, revenue operators, and agencies who need outbound to look thoughtful in the inbox and controlled behind the scenes.
+          </p>
+        </div>
+        <div className="logo-row">
+          {trustLogos.map((logo) => (
+            <div className="logo-chip" key={logo}>{logo}</div>
+          ))}
+        </div>
+      </section>
+
+      <section className="editorial-grid" id="product">
+        <div className="section-heading-block">
+          <div className="tiny-label">Why Neal feels different</div>
+          <h3>One system for signal capture, copy quality, and operator control.</h3>
+          <p>
+            Most outbound tools optimize for throughput. Neal optimizes for relevance, reviewability, and the kind of consistency teams need when real reputation is on the line.
+          </p>
+        </div>
+        <div className="section-card-stack">
+          <FeaturePanel
+            accent="01"
+            title="Relevant research that actually informs the message"
+            body="Pull in lead context, firmographic fit, hiring activity, proof alignment, and campaign warnings so every sequence starts with better raw material."
+          />
+          <FeaturePanel
+            accent="02"
+            title="Persona logic before generation"
+            body="Define pain, wedge, proof, exclusions, and objections once — then let the system adapt campaigns without drifting into vague, generic copy."
+          />
+        </div>
+      </section>
+
+      <section className="feature-masonry">
+        <ProductCard
+          kicker="Lead qualification"
+          title="Bulk-review prospects with warnings before they touch a live campaign."
+          body="Catch ICP mismatch, weak proof, bad enrichment, and campaign conflicts early so bad-fit prospects never pollute the workflow."
+        />
+        <ProductCard
+          kicker="Sequence generation"
+          title="Choose a framework, not a prompt puzzle."
+          body="Generate tailored steps with clear structure, grounded relevance, and calmer voice control — then refine them in a proper workbench."
+        />
+        <ProductCard
+          kicker="Inbox protection"
+          title="Keep deliverability and pacing visible at operator level."
+          body="Monitor send pressure, suppression logic, inbox health, and reply handling in the same environment used to create the campaign."
+        />
+        <ProductCard
+          kicker="Team operations"
+          title="Built for founders, RevOps, and agencies running live sending infrastructure."
+          body="Shared context, approval flows, and reusable campaign logic make it easier to keep quality high as volume and headcount grow."
+        />
+      </section>
+
+      <section className="workflow-section" id="workflow">
+        <div className="workflow-intro">
+          <div className="tiny-label">Workflow</div>
+          <h3>The operating rhythm behind a better campaign.</h3>
+          <p>
+            Neal is opinionated about what should happen before launch. Teams move from raw inputs to reviewed sequences in a way that preserves context instead of scattering it.
+          </p>
+        </div>
+        <div className="workflow-grid">
+          {workflowSteps.map((item) => (
+            <div className="workflow-card" key={item.step}>
+              <span>{item.step}</span>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="proof-section" id="proof">
+        <div className="proof-highlight">
+          <div className="tiny-label">Proof</div>
+          <h3>High-signal teams use Neal when quality matters more than vanity throughput.</h3>
+          <p>
+            The strongest results come from teams treating outbound like an operational discipline: better source material, clearer positioning, tighter review, and fewer unforced mistakes.
+          </p>
+          <div className="proof-metrics">
+            <MetricPill value="7–8%" label="message-to-meeting on tightly segmented campaigns" />
+            <MetricPill value="Hours saved" label="each week by removing manual lead research loops" />
+            <MetricPill value="Sub-10 min" label="support response target for live operators" />
           </div>
         </div>
-        <div className="auth-side muted-panel">
-          <div className="tiny-label">Workspace health</div>
-          <ul className="detail-list compact-list">
-            <li><span>Inboxes connected</span><strong>3</strong></li>
-            <li><span>Pending review replies</span><strong>7</strong></li>
-            <li><span>Queued leads</span><strong>147</strong></li>
+        <div className="testimonial-stack">
+          <TestimonialCard
+            quote="Neal gave us a calmer way to scale outbound. The copy improved, but the bigger win was finally having a system our operators could trust."
+            author="Pawel Nical"
+            role="Community Lead, Clay ecosystem"
+          />
+          <TestimonialCard
+            quote="Most tools generate text. Neal generates confidence — because the research, fit checks, and review flow are all in the same place."
+            author="Joseph Danby"
+            role="Founder, GTM advisory"
+          />
+          <TestimonialCard
+            quote="It feels less like a writing assistant and more like a real outbound control layer. Our team ships faster and makes fewer bad calls."
+            author="Malvina El-Sayegh"
+            role="Revenue Enablement leader"
+          />
+        </div>
+      </section>
+
+      <section className="pricing-teaser" id="pricing">
+        <div className="pricing-copy">
+          <div className="tiny-label">Simple entry point</div>
+          <h3>Start with a pilot. Expand when the workflow proves itself.</h3>
+          <p>
+            Neal is designed to earn its place quickly: bring one campaign, one persona set, and one operator team — then scale the system once the process is working.
+          </p>
+        </div>
+        <div className="pricing-card">
+          <div className="plan-kicker">Pilot</div>
+          <div className="plan-price">From €490<span>/month</span></div>
+          <ul>
+            <li>Research-led campaign setup</li>
+            <li>Persona and proof configuration</li>
+            <li>Sequence workbench + approvals</li>
+            <li>Inbox and reply operations layer</li>
           </ul>
-          <div className="status-row">
-            <div className="status-chip success">Ready</div>
-            <div className="status-chip">2FA enabled</div>
-          </div>
+          <button className="primary-button light full">Request access</button>
         </div>
-      </div>
+      </section>
+
+      <section className="final-cta">
+        <div>
+          <div className="tiny-label">Final call</div>
+          <h3>If your outbound matters, the system behind it should too.</h3>
+          <p>
+            Stop stitching together research tabs, prompt experiments, and sequencing tools. Run the full motion from one branded operating layer.
+          </p>
+        </div>
+        <div className="final-cta-actions">
+          <button className="primary-button light large">Start free pilot</button>
+          <button className="ghost-button dark large">Book a walkthrough</button>
+        </div>
+      </section>
+
+      <footer className="footer">
+        <div>
+          <strong>Neal</strong>
+          <span>Research-led outreach infrastructure for serious GTM teams.</span>
+        </div>
+        <div className="footer-links">
+          <a href="#product">Product</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#proof">Proof</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function OnboardingStates() {
+function WorkbenchScreen() {
   return (
-    <div className="state-grid two-up">
-      <section className="panel">
-        <ProgressHeader activeStep={1} />
-        <div className="state-card-row">
-          <StateCard title="Empty workspace" body="No lead sources added yet. Start by importing a CSV, connecting Apollo, or pasting a list." badge="Empty" />
-          <StateCard title="Partially configured" body="Lead source selected, but mapping is incomplete. 2 required fields still missing." badge="Needs work" variant="warning" />
-        </div>
-      </section>
-      <section className="panel">
-        <div className="tiny-label">Onboarding progress states</div>
-        <div className="progress-stack">
-          <ProgressLine label="Lead source" state="Done" tone="done" />
-          <ProgressLine label="Field mapping" state="Active" tone="active" />
-          <ProgressLine label="Persona setup" state="Waiting" />
-          <ProgressLine label="Sequence generation" state="Disabled" tone="disabled" />
-        </div>
-        <div className="row-actions top-gap">
-          <button className="ghost-button">Save for later</button>
-          <button className="primary-button">Continue</button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function ImportStates() {
-  return (
-    <div className="state-grid import-layout">
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="tiny-label">Lead import</div>
-            <h3>Source selection</h3>
-          </div>
-          <div className="status-chip">Step 1</div>
-        </div>
-        <div className="source-grid">
-          <SelectableCard title="CSV upload" detail="Selected · 2,431 rows detected" active />
-          <SelectableCard title="Paste rows" detail="Hover state preview" />
-          <SelectableCard title="Apollo segment" detail="Disabled until auth" disabled />
-          <SelectableCard title="Clay table" detail="Last synced 18m ago" />
-        </div>
-        <div className="upload-panel mono-panel">
-          <div>
-            <div className="tiny-label">Selected file</div>
-            <strong>q2_revops_targets.csv</strong>
-            <p>Detected 6 recognizable columns and 1 custom signal field.</p>
-          </div>
-          <button className="primary-button">Continue to mapping</button>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="tiny-label">Field mapping</div>
-            <h3>Main and edge states</h3>
-          </div>
-          <div className="status-chip warning">2 issues</div>
-        </div>
-        <div className="mapping-table">
-          <MappingRow incoming="first_name" target="First name" state="Matched" />
-          <MappingRow incoming="company" target="Company" state="Matched" />
-          <MappingRow incoming="email" target="Work email" state="Matched" />
-          <MappingRow incoming="linkedin" target="Unmapped" state="Required" warning />
-          <MappingRow incoming="headcount_bucket" target="Custom field" state="Custom" />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function PersonaStates() {
-  return (
-    <div className="state-grid two-up">
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="tiny-label">Persona definition</div>
-            <h3>Configured state</h3>
-          </div>
-          <div className="status-chip success">Ready</div>
-        </div>
-        <div className="persona-layout mono-grid">
-          <PersonaBlock label="Target persona" value="VP / Head of RevOps at 100–1000 employee B2B SaaS" />
-          <PersonaBlock label="Primary pain" value="Scaling outbound quality while SDR volume rises" />
-          <PersonaBlock label="Proof" value="31% increase in positive reply rate with tighter research workflows" />
-          <PersonaBlock label="Exclude" value="Solo founders, agencies, sub-30 employee companies" muted />
-        </div>
-      </section>
-      <section className="panel muted-panel">
-        <div className="panel-header">
-          <div>
-            <div className="tiny-label">Persona setup</div>
-            <h3>Incomplete / no-data state</h3>
-          </div>
-          <div className="status-chip">Draft</div>
-        </div>
-        <div className="empty-state small-empty">
-          <strong>No proof points added yet</strong>
-          <p>Add a concrete result, customer archetype, or operator insight before generating copy.</p>
-          <button className="ghost-button">Add proof point</button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function GenerationStates() {
-  return (
-    <div className="state-grid two-up">
-      <section className="panel center-panel">
-        <div className="loader-ring" />
-        <div className="eyebrow-pill">Generation in progress</div>
-        <h3>Building sequence structure</h3>
-        <p>Clustering triggers, selecting a framework, and drafting message steps.</p>
-        <div className="generation-log wide-log">
-          <LogRow text="Imported 2,431 leads and validated required columns" tone="done" />
-          <LogRow text="Resolved persona: RevOps operators with active team growth" tone="done" />
-          <LogRow text="Drafting step 1 and 2 with trigger-based structure" tone="live" />
-          <LogRow text="Preparing fallback variants and objection handling" />
-        </div>
-      </section>
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="tiny-label">Outcome states</div>
-            <h3>Success / error coverage</h3>
-          </div>
-        </div>
-        <div className="state-card-row stack">
-          <StateCard title="Generation complete" body="4-step sequence produced with one framework recommendation and two variant notes." badge="Success" variant="success" />
-          <StateCard title="Generation blocked" body="Insufficient persona proof. Add at least one proof point or customer signal to continue." badge="Error" variant="error" />
-          <StateCard title="Disabled" body="Generate button remains off until mapping and persona setup are complete." badge="Disabled" />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function WorkbenchStates() {
-  return (
-    <div className="workbench-shell">
-      <aside className="workbench-left">
-        <div className="workbench-block">
+    <div className="product-shell">
+      <aside className="product-sidebar">
+        <div className="surface-card dark-card">
           <div className="tiny-label">Sequence</div>
           <h3>RevOps operator wedge</h3>
           <div className="status-row wrap">
-            <div className="status-chip success">Draft</div>
+            <div className="status-chip success">Draft approved</div>
             <div className="status-chip">4 steps</div>
-            <div className="status-chip warning">1 step needs review</div>
+            <div className="status-chip warning">1 note pending</div>
           </div>
         </div>
-        <div className="workbench-block">
-          <div className="list-heading"><span>Lead / persona list</span><span>147</span></div>
-          <LeadCard name="Maya Chen" company="Northstar Health" title="VP Revenue Operations" meta="Selected · high fit · hiring 4 SDRs" selected />
-          <LeadCard name="Jonas Weber" company="Axiom Cloud" title="Head of Growth" meta="Hover / ready" />
-          <LeadCard name="Clara Rossi" company="Helio Finance" title="Director Demand Gen" meta="Partially enriched" muted />
+        <div className="surface-card">
+          <div className="list-heading"><span>Lead queue</span><span>147</span></div>
+          <LeadCard name="Maya Chen" company="Northstar Health" title="VP Revenue Operations" meta="selected · high fit · hiring 4 SDRs" selected />
+          <LeadCard name="Jonas Weber" company="Axiom Cloud" title="Head of Growth" meta="review-ready · benchmark angle" />
+          <LeadCard name="Clara Rossi" company="Helio Finance" title="Director Demand Gen" meta="research still filling" muted />
         </div>
       </aside>
 
-      <section className="workbench-center">
-        <div className="editor-topbar">
-          <div>
-            <div className="tiny-label">Sequence workbench</div>
-            <h3>Central editor</h3>
+      <section className="product-main">
+        <div className="surface-card main-editor">
+          <div className="panel-header">
+            <div>
+              <div className="tiny-label">Sequence workbench</div>
+              <h3>Refine the campaign in one place</h3>
+            </div>
+            <div className="header-actions">
+              <button className="ghost-button small">Preview</button>
+              <button className="primary-button small">Approve</button>
+            </div>
           </div>
-          <div className="editor-actions">
-            <button className="ghost-button small">Preview</button>
-            <button className="primary-button small">Approve</button>
+
+          <div className="tab-row">
+            <button className="step-tab active">Email 01</button>
+            <button className="step-tab">Email 02</button>
+            <button className="step-tab">Bump</button>
+            <button className="step-tab">Break-up</button>
           </div>
-        </div>
-        <div className="step-tabs">
-          <button className="step-tab active">Email 01</button>
-          <button className="step-tab">Email 02</button>
-          <button className="step-tab">Bump</button>
-          <button className="step-tab">Break-up</button>
-          <button className="step-tab add">＋</button>
-        </div>
-        <div className="editor-card">
-          <div className="editor-field"><span className="tiny-label">Subject</span><strong>Noticed Northstar is building RevOps capacity</strong></div>
-          <div className="editor-field body-copy">Maya — saw Northstar is hiring several SDR roles right now, which usually means your RevOps layer is about to absorb a lot of new process load.\n\nWe help teams turn that moment into a cleaner outbound system: research signals, persona-aware sequencing, inbox pacing, and reply handling in one operator workflow.\n\nIf useful, I can show you how similar teams tightened personalization quality without adding manual research overhead.</div>
-          <div className="editor-footer"><span>Active</span><span>Selected framework</span><span>Confidence high</span></div>
-        </div>
-        <div className="composer-card">
-          <div className="tiny-label">AI composer</div>
-          <div className="chat-bubble user">Tighten paragraph two and make it more founder-sharp.</div>
-          <div className="chat-bubble ai">I’d keep the hiring signal, reduce platform language, and emphasize operational leverage.</div>
-          <div className="composer-input"><input value="Shorten and sharpen." readOnly /><button className="primary-button small">Send</button></div>
+
+          <div className="editor-stack">
+            <div className="editor-block">
+              <span className="tiny-label">Subject</span>
+              <strong>Noticed Northstar is building RevOps capacity</strong>
+            </div>
+            <div className="editor-block body-copy">
+              Maya — saw Northstar is hiring several SDR roles, which usually means your RevOps layer is about to absorb a lot of new process load.
+              {'\n\n'}
+              Neal helps teams tighten outbound quality at exactly that stage: better research signals, persona-aware sequencing, inbox pacing, and reply handling in one operator workflow.
+              {'\n\n'}
+              If useful, I can show how similar teams reduced manual research overhead without flattening message quality.
+            </div>
+          </div>
         </div>
       </section>
 
-      <aside className="workbench-right">
-        <div className="context-card">
+      <aside className="product-sidebar right">
+        <div className="surface-card">
           <div className="tiny-label">Research context</div>
           <h3>Maya Chen</h3>
           <ul className="detail-list compact-list">
             <li><span>Hiring signal</span><strong>4 open SDR roles</strong></li>
-            <li><span>Recent theme</span><strong>Attribution drift</strong></li>
-            <li><span>Best angle</span><strong>Scale without quality loss</strong></li>
+            <li><span>Current tension</span><strong>Attribution drift</strong></li>
+            <li><span>Best framing</span><strong>Scale without quality loss</strong></li>
           </ul>
         </div>
-        <div className="context-card muted-panel">
-          <div className="tiny-label">No-data side state</div>
-          <strong>Research still loading for 18 leads</strong>
-          <p>Workbench stays usable while context backfills in parallel.</p>
+        <div className="surface-card muted-card">
+          <div className="tiny-label">Reply operations</div>
+          <strong>7 threads need routing</strong>
+          <p>Classify intent, draft a next step, and keep ownership clear without leaving the campaign context.</p>
         </div>
       </aside>
     </div>
   );
 }
 
-function OverlayStates() {
+function OnboardingScreen() {
   return (
-    <div className="overlay-shell">
-      <div className="workbench-shell subdued">
-        <aside className="workbench-left"><div className="workbench-block muted-panel slim-block" /></aside>
-        <section className="workbench-center"><div className="editor-card muted-panel large-block" /></section>
-        <aside className="workbench-right"><div className="context-card muted-panel slim-block" /></aside>
-      </div>
-      <div className="modal-backdrop" />
-      <div className="overlay-layout">
-        <div className="modal-card">
-          <div className="panel-header">
-            <div>
-              <div className="tiny-label">Add step</div>
-              <h3>Insert a new sequence step</h3>
-            </div>
-            <button className="ghost-button small">Close</button>
+    <div className="two-column-stage">
+      <section className="surface-card">
+        <div className="panel-header">
+          <div>
+            <div className="tiny-label">Campaign setup</div>
+            <h3>Inputs before generation</h3>
           </div>
-          <div className="modal-grid">
-            <SelectableCard title="Email step" detail="Selected state" active />
-            <SelectableCard title="Bump" detail="Hover-ready option" />
-            <SelectableCard title="Break-up" detail="Available" />
-            <SelectableCard title="Manual task" detail="Disabled in auto mode" disabled />
-          </div>
-          <div className="inline-form">
-            <label>Delay<input value="3 days" readOnly /></label>
-            <label>Framework<input value="Observation → thesis → invitation" readOnly /></label>
-          </div>
+          <div className="status-chip">Step 2 of 4</div>
         </div>
+        <div className="setup-grid">
+          <SetupCard title="Lead source" body="CSV source connected and validated." status="Done" />
+          <SetupCard title="Field mapping" body="Two required fields still need confirmation." status="Needs attention" warning />
+          <SetupCard title="Persona logic" body="Pain, proof, and exclusions not configured yet." status="Blocked" />
+          <SetupCard title="Generation" body="Unlocks once the campaign has enough real context." status="Disabled" />
+        </div>
+      </section>
+      <section className="surface-card dark-card">
+        <div className="tiny-label">Setup philosophy</div>
+        <h3>Neal is intentionally opinionated before the first draft exists.</h3>
+        <p>
+          The system refuses to confuse motion with readiness. You can move quickly, but only after lead quality, persona logic, and proof are in place.
+        </p>
+        <div className="progress-list">
+          <ProgressLine label="Lead source connected" state="Done" tone="done" />
+          <ProgressLine label="Required fields mapped" state="Active" tone="active" />
+          <ProgressLine label="Persona logic configured" state="Waiting" />
+          <ProgressLine label="Sequence generated" state="Disabled" tone="disabled" />
+        </div>
+      </section>
+    </div>
+  );
+}
 
-        <div className="dropdown-card">
-          <div className="tiny-label">Framework search</div>
-          <label className="search-field">Search<input value="tri" readOnly /></label>
-          <div className="dropdown-list">
-            <DropdownItem title="Trigger event → relevance → proof" body="Best for signal-based openers" active />
-            <DropdownItem title="Observation → thesis → invitation" body="Calm and consultative" />
-            <DropdownItem title="Peer benchmark → gap → meeting ask" body="Benchmark-led framing" />
-          </div>
-        </div>
+function SystemScreen() {
+  return (
+    <div className="system-grid">
+      <StateCard title="Empty campaigns" body="Start from a persona set or duplicate a prior framework." badge="No data" />
+      <StateCard title="Import succeeded" body="2,431 leads imported. 2,308 valid, 123 safely suppressed." badge="Success" variant="success" />
+      <StateCard title="Connection issue" body="Apollo sync failed because authentication expired." badge="Error" variant="error" />
+      <StateCard title="Partial setup" body="Campaign created, but proof points are still missing." badge="Warning" variant="warning" />
+    </div>
+  );
+}
+
+function FeaturePanel({ accent, title, body }: { accent: string; title: string; body: string }) {
+  return (
+    <div className="feature-panel elevated">
+      <div className="feature-accent">{accent}</div>
+      <h4>{title}</h4>
+      <p>{body}</p>
+    </div>
+  );
+}
+
+function ProductCard({ kicker, title, body }: { kicker: string; title: string; body: string }) {
+  return (
+    <div className="product-card">
+      <div className="tiny-label">{kicker}</div>
+      <h4>{title}</h4>
+      <p>{body}</p>
+    </div>
+  );
+}
+
+function TestimonialCard({ quote, author, role }: { quote: string; author: string; role: string }) {
+  return (
+    <div className="testimonial-card">
+      <p>“{quote}”</p>
+      <div>
+        <strong>{author}</strong>
+        <span>{role}</span>
       </div>
     </div>
   );
 }
 
-function SystemStates() {
+function MetricPill({ value, label }: { value: string; label: string }) {
   return (
-    <div className="state-grid three-up">
-      <StateCard title="Empty campaigns" body="No sequences created yet. Start from persona setup or duplicate a prior framework." badge="No data" />
-      <StateCard title="Import succeeded" body="2,431 leads imported. 2,308 valid, 123 suppressed or malformed." badge="Success" variant="success" />
-      <StateCard title="Connection error" body="Apollo sync failed. Authentication expired and requires reconnect." badge="Error" variant="error" />
-      <StateCard title="Button disabled" body="Send test remains unavailable until an inbox is connected and healthy." badge="Disabled" />
-      <StateCard title="Partial setup" body="Campaign created, but sequence still lacks approved copy on step 3." badge="Partial" variant="warning" />
-      <StateCard title="Empty replies" body="No reply threads yet. Once responses arrive, this area becomes the operator inbox." badge="Empty" />
+    <div className="metric-pill">
+      <strong>{value}</strong>
+      <span>{label}</span>
     </div>
   );
 }
 
-function ProgressHeader({ activeStep }: { activeStep: number }) {
-  const steps = ['Lead source', 'Field mapping', 'Persona setup', 'Generate'];
+function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="tiny-label">Setup flow</div>
-      <div className="flow-progress top-gap">
-        {steps.map((step, index) => {
-          const n = index + 1;
-          const cls = n < activeStep ? 'progress-item done' : n === activeStep ? 'progress-item active' : 'progress-item';
-          return (
-            <div className={cls} key={step}>
-              <span>{n < activeStep ? '✓' : `0${n}`}</span>
-              <strong>{step}</strong>
-            </div>
-          );
-        })}
-      </div>
+    <div className="stat-tile">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function SetupCard({ title, body, status, warning }: { title: string; body: string; status: string; warning?: boolean }) {
+  return (
+    <div className={warning ? 'setup-card warning' : 'setup-card'}>
+      <div className={warning ? 'status-chip warning' : 'status-chip'}>{status}</div>
+      <strong>{title}</strong>
+      <p>{body}</p>
     </div>
   );
 }
@@ -490,46 +558,6 @@ function StateCard({ title, body, badge, variant }: { title: string; body: strin
   );
 }
 
-function FeatureCard({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="feature-panel">
-      <div className="tiny-label">Capability</div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
-  );
-}
-
-function SelectableCard({ title, detail, active, disabled }: { title: string; detail: string; active?: boolean; disabled?: boolean }) {
-  const cls = disabled ? 'option-card disabled' : active ? 'option-card active' : 'option-card';
-  return (
-    <div className={cls}>
-      <strong>{title}</strong>
-      <span>{detail}</span>
-    </div>
-  );
-}
-
-function MappingRow({ incoming, target, state, warning }: { incoming: string; target: string; state: string; warning?: boolean }) {
-  return (
-    <div className="mapping-row">
-      <div><span className="tiny-label">Incoming</span><strong>{incoming}</strong></div>
-      <div className="arrow">→</div>
-      <div><span className="tiny-label">Mapped to</span><strong>{target}</strong></div>
-      <div className={warning ? 'status-chip warning' : state === 'Matched' ? 'status-chip success' : 'status-chip'}>{state}</div>
-    </div>
-  );
-}
-
-function PersonaBlock({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-  return (
-    <div className={muted ? 'persona-block muted' : 'persona-block'}>
-      <span className="tiny-label">{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function LeadCard({ name, company, title, meta, selected, muted }: { name: string; company: string; title: string; meta: string; selected?: boolean; muted?: boolean }) {
   const cls = muted ? 'lead-card muted' : selected ? 'lead-card selected' : 'lead-card';
   return (
@@ -539,33 +567,6 @@ function LeadCard({ name, company, title, meta, selected, muted }: { name: strin
       <span>{company}</span>
       <div className="lead-meta"><span>{meta}</span></div>
     </div>
-  );
-}
-
-function DropdownItem({ title, body, active }: { title: string; body: string; active?: boolean }) {
-  return (
-    <div className={active ? 'dropdown-item active' : 'dropdown-item'}>
-      <div>
-        <strong>{title}</strong>
-        <span>{body}</span>
-      </div>
-      <span className="tiny-label">↵</span>
-    </div>
-  );
-}
-
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="stat-pill">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function LogRow({ text, tone }: { text: string; tone?: 'done' | 'live' }) {
-  return (
-    <div className="log-row"><span className={tone ? `log-dot ${tone}` : 'log-dot'} />{text}</div>
   );
 }
 
