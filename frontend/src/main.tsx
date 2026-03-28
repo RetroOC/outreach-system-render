@@ -2,566 +2,433 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
 
-type NavItem = { label: string; href: string };
-type Feature = { eyebrow: string; title: string; body: string };
-type WorkflowStep = { step: string; title: string; body: string };
-type StoryCard = { id: string; label: string; title: string; summary: string; metrics: { label: string; value: string }[]; bullets: string[] };
-type UseCase = { name: string; title: string; body: string; points: string[] };
+type SidebarItem = { id: ViewId; label: string; eyebrow: string };
+type ViewId = 'overview' | 'campaigns' | 'inboxes' | 'replies' | 'pipeline' | 'todo';
+type Kpi = { label: string; value: string; delta: string; tone?: 'good' | 'warn' | 'neutral' };
+type Campaign = {
+  name: string;
+  status: 'Draft' | 'Active' | 'Paused';
+  objective: string;
+  sequence: string;
+  enrolled: number;
+  replies: number;
+  positiveRate: string;
+  owner: string;
+};
+type Inbox = {
+  address: string;
+  provider: string;
+  health: 'Healthy' | 'Degraded' | 'Paused';
+  sentToday: string;
+  cap: string;
+  pacing: string;
+};
+type ReplyThread = {
+  lead: string;
+  company: string;
+  intent: 'Interested' | 'Objection' | 'OOO' | 'Unsubscribe';
+  status: string;
+  waited: string;
+  action: string;
+};
+type TodoItem = { title: string; detail: string; done?: boolean };
 
-const navItems: NavItem[] = [
-  { label: 'Product', href: '#product' },
-  { label: 'Workflow', href: '#workflow' },
-  { label: 'Teams', href: '#teams' },
-  { label: 'Pricing', href: '#pricing' },
+const sidebarItems: SidebarItem[] = [
+  { id: 'overview', label: 'Overview', eyebrow: 'Today' },
+  { id: 'campaigns', label: 'Campaigns', eyebrow: 'Execution' },
+  { id: 'inboxes', label: 'Inboxes', eyebrow: 'Health' },
+  { id: 'replies', label: 'Replies', eyebrow: 'Ops' },
+  { id: 'pipeline', label: 'Pipeline', eyebrow: 'Build' },
+  { id: 'todo', label: 'Todo', eyebrow: 'Next' },
 ];
 
-const features: Feature[] = [
-  {
-    eyebrow: 'Research-led generation',
-    title: 'The message is only as good as the context behind it.',
-    body: 'Neal turns live signals, fit logic, case proof, and operator judgment into reusable campaign inputs so outbound starts from substance instead of guesswork.',
-  },
-  {
-    eyebrow: 'Operator control',
-    title: 'Designed for teams that care what actually gets sent.',
-    body: 'Review states, pacing controls, health indicators, and reply routing stay visible from setup to launch instead of being hidden behind a copy generator.',
-  },
-  {
-    eyebrow: 'Reusable systems',
-    title: 'Build a repeatable motion without turning the workflow brittle.',
-    body: 'Carry forward frameworks, proof libraries, exclusions, and positioning rules without stacking prompts and disconnected docs across the team.',
-  },
+const kpis: Kpi[] = [
+  { label: 'Campaigns live', value: '03', delta: '+1 in scope', tone: 'good' },
+  { label: 'Leads enrolled', value: '1,284', delta: 'cleaned + deduped', tone: 'neutral' },
+  { label: 'Replies awaiting action', value: '07', delta: 'needs routing today', tone: 'warn' },
+  { label: 'Inbox capacity remaining', value: '61%', delta: 'safe for current pacing', tone: 'good' },
 ];
 
-const workflow: WorkflowStep[] = [
+const campaigns: Campaign[] = [
   {
-    step: '01',
-    title: 'Collect real context',
-    body: 'Lead sources, hiring signals, firmographics, enrichment, and proof points are assembled before copy generation begins.',
+    name: 'Tanzania UHNI ranch buyers',
+    status: 'Active',
+    objective: 'Private consultation booked',
+    sequence: '4-step buyer-side sequence',
+    enrolled: 112,
+    replies: 14,
+    positiveRate: '5.4%',
+    owner: 'Gershon',
   },
   {
-    step: '02',
-    title: 'Define the angle',
-    body: 'Set persona tension, exclusions, positioning, and proof so every campaign has a clear strategic frame.',
+    name: 'Founder outbound system pilot',
+    status: 'Draft',
+    objective: 'Discovery calls with infra buyers',
+    sequence: '3-step operator workflow',
+    enrolled: 0,
+    replies: 0,
+    positiveRate: '—',
+    owner: 'Neal',
   },
   {
-    step: '03',
-    title: 'Generate inside guardrails',
-    body: 'Draft tailored outreach with rationale attached, strong reviewability, and visible constraints for operators.',
-  },
-  {
-    step: '04',
-    title: 'Run and refine live',
-    body: 'Approve, launch, route replies, and improve performance without breaking the chain of context across tools.',
-  },
-];
-
-const storyCards: StoryCard[] = [
-  {
-    id: 'signals',
-    label: 'Signal intelligence',
-    title: 'See why an account belongs in the sequence before writing to it.',
-    summary: 'A live research surface that pulls together fit, timing, champion movement, and proof alignment in one operator view.',
-    metrics: [
-      { label: 'Qualified accounts', value: '148' },
-      { label: 'Proof match score', value: '91%' },
-      { label: 'Warnings resolved', value: '23' },
-    ],
-    bullets: ['Hiring surge detected', 'Champion changed 19 days ago', 'Relevant proof: 2 RevOps case studies'],
-  },
-  {
-    id: 'workbench',
-    label: 'Sequence workbench',
-    title: 'Shape the message while the reasoning stays attached.',
-    summary: 'Drafting, approvals, pacing, and framework logic sit in one deliberate composition rather than in separate tools and tabs.',
-    metrics: [
-      { label: 'Steps generated', value: '4' },
-      { label: 'Approval status', value: 'Ready' },
-      { label: 'Reply trend', value: '+31%' },
-    ],
-    bullets: ['Framework: trigger → tension → proof', 'Sending pressure within safe range', 'Review required before launch'],
-  },
-  {
-    id: 'ops',
-    label: 'Reply operations',
-    title: 'Run the live outbound motion without losing quality control.',
-    summary: 'Classify replies, assign owners, suppress risk, and keep inbox operations tied to the exact campaign context that created them.',
-    metrics: [
-      { label: 'Threads awaiting route', value: '7' },
-      { label: 'Avg. triage time', value: '08m' },
-      { label: 'Inbox health', value: 'Stable' },
-    ],
-    bullets: ['Intent classification active', 'Owner handoff rules applied', 'Suppression changes synced'],
+    name: 'Agency revops offer',
+    status: 'Paused',
+    objective: 'Reposition value prop before relaunch',
+    sequence: 'Needs new proof mapping',
+    enrolled: 48,
+    replies: 6,
+    positiveRate: '4.1%',
+    owner: 'Gershon',
   },
 ];
 
-const useCases: UseCase[] = [
+const inboxes: Inbox[] = [
+  { address: 'founder@neal.so', provider: 'Google', health: 'Healthy', sentToday: '26', cap: '60', pacing: '8–11 min' },
+  { address: 'team@neal.so', provider: 'Microsoft', health: 'Degraded', sentToday: '19', cap: '40', pacing: 'watch complaints' },
+  { address: 'pilot@neal.so', provider: 'Google', health: 'Paused', sentToday: '0', cap: '25', pacing: 'auth refresh needed' },
+];
+
+const replies: ReplyThread[] = [
+  { lead: 'Maya Chen', company: 'Northstar', intent: 'Interested', status: 'Waiting for owner', waited: '08m', action: 'Draft follow-up + assign' },
+  { lead: 'Jonas Weber', company: 'Meridian', intent: 'Objection', status: 'Needs custom response', waited: '17m', action: 'Handle pricing pushback' },
+  { lead: 'Nina Rossi', company: 'Auxo', intent: 'OOO', status: 'Auto-resume candidate', waited: '04m', action: 'Reschedule after return date' },
+  { lead: 'Samir Patel', company: 'Atlas GTM', intent: 'Unsubscribe', status: 'Suppression required', waited: '02m', action: 'Confirm suppression sync' },
+];
+
+const backendTracks: { title: string; body: string; bullets: string[] }[] = [
   {
-    name: 'Founders',
-    title: 'Launch targeted outbound without building a brittle stack.',
-    body: 'Move from rough lead sources to credible outreach quickly while keeping quality high from the first campaign onward.',
-    points: ['Sharper first campaigns', 'Less manual research drag', 'Clearer positioning discipline'],
+    title: 'Backend shape locked',
+    body: 'OpenClaw stays the orchestration layer while `outreach-core` handles campaigns, inboxes, scheduling, replies, and reporting.',
+    bullets: ['Fastify API scaffold exists', 'Postgres schema draft exists', 'Queue/worker skeleton exists'],
   },
   {
-    name: 'RevOps teams',
-    title: 'Standardize quality across operators, inboxes, and campaigns.',
-    body: 'Keep fit checks, message frameworks, pacing, and reply handling consistent as more people touch the motion.',
-    points: ['Shared campaign logic', 'Safer launch controls', 'Less performance drift'],
+    title: 'Frontend rebuilt around operations',
+    body: 'The UI is now aimed at operators: campaign state, inbox health, reply routing, and build pipeline instead of a pure marketing surface.',
+    bullets: ['Overview dashboard', 'Campaign command view', 'Reply triage lane'],
   },
   {
-    name: 'Agencies',
-    title: 'Deliver premium outbound execution clients can actually trust.',
-    body: 'Give every account a research-backed workflow, cleaner approvals, and a more convincing operational surface.',
-    points: ['Faster client review', 'Reusable proof systems', 'Higher-quality deliverables'],
+    title: 'Immediate gap',
+    body: 'The next step is wiring these views to live endpoints and replacing static state with API-backed data contracts.',
+    bullets: ['Map UI to routes', 'Create fetch layer', 'Add load/error states'],
   },
 ];
 
-const testimonials = [
-  {
-    quote: 'Neal made our outbound feel intentional again. The win was not just better copy — it was better judgment built into the workflow.',
-    author: 'Pawel Nical',
-    role: 'Community Lead, Clay ecosystem',
-  },
-  {
-    quote: 'It feels closer to a control layer than a writing tool. Research, review, and live operations finally sit in the same product.',
-    author: 'Joseph Danby',
-    role: 'Founder, GTM advisory',
-  },
-  {
-    quote: 'You can tell this was designed for teams who care about reputation, not vanity volume. That difference shows up everywhere.',
-    author: 'Malvina El-Sayegh',
-    role: 'Revenue Enablement leader',
-  },
+const todo: TodoItem[] = [
+  { title: 'Finalize schema + API contracts', detail: 'Freeze v1 payloads for campaigns, inbox health, replies, and reporting.' },
+  { title: 'Wire live frontend data', detail: 'Replace static cards with fetchers against outreach-core endpoints.' },
+  { title: 'Build campaign builder flow', detail: 'Create forms for steps, pacing, objectives, inbox assignment, and enrollment.' },
+  { title: 'Reply ops surface', detail: 'Add classification, assignment, suppression confirmation, and thread history.', done: false },
+  { title: 'Shipping', detail: 'Push to GitHub and deploy latest frontend build to Vercel.', done: false },
 ];
-
-const logos = ['Northstar', 'Meridian', 'Atlas GTM', 'Signal Labs', 'Auxo', 'Stacked'];
-
-function useReveal() {
-  React.useEffect(() => {
-    const items = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add('revealed');
-        });
-      },
-      { threshold: 0.14 }
-    );
-
-    items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
-  }, []);
-}
 
 function App() {
-  const [activeStory, setActiveStory] = React.useState(storyCards[0].id);
-  const [activeUseCase, setActiveUseCase] = React.useState(0);
-  const currentStory = storyCards.find((item) => item.id === activeStory) ?? storyCards[0];
-
-  useReveal();
+  const [view, setView] = React.useState<ViewId>('overview');
 
   return (
-    <div className="site-shell">
-      <div className="orb orb-a" />
-      <div className="orb orb-b" />
-
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Neal home">
-          <span className="brand-mark">N</span>
-          <span className="brand-text">
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand-block">
+          <div className="brand-mark">N</div>
+          <div>
             <strong>Neal</strong>
-            <em>Research-led outreach infrastructure</em>
-          </span>
-        </a>
-
-        <nav className="nav">
-          {navItems.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="topbar-actions">
-          <a className="ghost-link" href="#footer">
-            Login
-          </a>
-          <a className="button button-primary" href="#cta">
-            Book demo
-          </a>
+            <p>Outreach operator system</p>
+          </div>
         </div>
-      </header>
 
-      <main className="page" id="top">
-        <section className="hero-panel reveal" data-reveal>
-          <div className="hero-copy">
-            <div className="eyebrow">Premium outbound systems for quality-led teams</div>
-            <h1>
-              Relevant outreach built from <span>real research</span>, not templates.
-            </h1>
-            <p className="hero-lede">
-              Neal gives serious GTM teams one elegant operating layer for signal capture, message strategy, approvals, inbox health, and live reply operations.
-            </p>
+        <div className="sidebar-group">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              className={view === item.id ? 'sidebar-item active' : 'sidebar-item'}
+              onClick={() => setView(item.id)}
+            >
+              <span>{item.eyebrow}</span>
+              <strong>{item.label}</strong>
+            </button>
+          ))}
+        </div>
 
-            <div className="hero-actions">
-              <a className="button button-primary button-large" href="#pricing">
-                Start with a pilot
-              </a>
-              <a className="button button-secondary button-large" href="#product">
-                See product story
-              </a>
-            </div>
+        <div className="sidebar-note">
+          <span>Build direction</span>
+          <strong>Boring, reliable engine first.</strong>
+          <p>Operator control, inbox safety, reply handling, then deeper AI layers.</p>
+        </div>
+      </aside>
 
-            <div className="hero-proof-row">
-              <div className="mini-proof">
-                <strong>2.7×</strong>
-                <span>faster campaign setup once research is centralized</span>
-              </div>
-              <div className="mini-proof">
-                <strong>31%</strong>
-                <span>higher positive reply rate on tightly reviewed campaigns</span>
-              </div>
-              <div className="mini-proof">
-                <strong>End-to-end</strong>
-                <span>research, drafting, approvals, and reply handling in one system</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-stage">
-            <div className="hero-stack">
-              <div className="product-frame frame-primary">
-                <FrameHeader title="Outbound control tower" label="Live campaign" />
-                <div className="frame-grid">
-                  <div className="data-cluster wide">
-                    <span className="cluster-label">Campaign thesis</span>
-                    <p>
-                      Northstar is hiring four SDRs while headcount stays flat in RevOps — strong indicator that process strain is rising before pipeline quality does.
-                    </p>
-                  </div>
-                  <StatCard value="2,431" label="Qualified leads" />
-                  <StatCard value="112" label="Safe suppressions" />
-                  <StatCard value="Ready" label="Launch state" />
-                  <StatCard value="38" label="Positive replies" />
-                </div>
-              </div>
-
-              <div className="product-frame frame-secondary left">
-                <FrameHeader title="Signal queue" label="Priority" compact />
-                <div className="list-card">
-                  <QueueRow name="Maya Chen" meta="high fit · hiring surge" strong />
-                  <QueueRow name="Jonas Weber" meta="champion changed · ready" />
-                  <QueueRow name="Clara Rossi" meta="proof missing · hold" muted />
-                </div>
-              </div>
-
-              <div className="product-frame frame-secondary right">
-                <FrameHeader title="Reply routing" label="Ops" compact />
-                <div className="ops-card">
-                  <span className="intent-pill">Intent: interested</span>
-                  <strong>7 threads need routing</strong>
-                  <p>Assign owner, draft the next step, and protect sending quality from the same surface.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="trust-strip reveal" data-reveal>
+      <main className="main-panel">
+        <header className="topbar">
           <div>
-            <div className="eyebrow subtle">Trusted by serious GTM operators</div>
+            <span className="eyebrow">Outreach rebuild</span>
+            <h1>Frontend aligned to the actual backend shape</h1>
             <p>
-              Built for founders, revenue teams, and agencies that need outbound to feel credible in the inbox and controlled behind the scenes.
+              This is now an operator-facing shell for campaigns, inboxes, replies, and execution tracking — built to map cleanly onto `outreach-core`.
             </p>
           </div>
-          <div className="logo-row">
-            {logos.map((logo) => (
-              <span key={logo}>{logo}</span>
-            ))}
+          <div className="topbar-card">
+            <span>Current focus</span>
+            <strong>Schema → routes → live data wiring</strong>
+            <p>No hard blocker. Main dependency is freezing MVP contracts before deeper UI work.</p>
           </div>
-        </section>
+        </header>
 
-        <section className="editorial-band reveal" data-reveal>
-          <div className="section-intro split-intro">
-            <div>
-              <div className="eyebrow">Why Neal exists</div>
-              <h2>Most outbound systems optimize for throughput. The best teams need relevance, reviewability, and control.</h2>
-            </div>
-            <p>
-              When research is weak, the message gets generic. When execution is fragmented, quality slips at launch. Neal is built to solve both problems at the same time.
-            </p>
-          </div>
-
-          <div className="contrast-showcase">
-            <article className="contrast-card muted-card">
-              <span>Generic template</span>
-              <strong>Low-signal intro. Weak proof. Easy to ignore.</strong>
-              <p>Most tools generate passable copy over incomplete context and hope volume covers the quality problem.</p>
-            </article>
-            <article className="contrast-card accent-card">
-              <span>Research-shaped draft</span>
-              <strong>Specific trigger, clear tension, relevant proof, visible review state.</strong>
-              <p>Neal keeps the source material, strategic angle, and operator guardrails attached all the way to send.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="feature-grid reveal" data-reveal>
-          {features.map((feature) => (
-            <article className="feature-card" key={feature.title}>
-              <span className="eyebrow subtle">{feature.eyebrow}</span>
-              <h3>{feature.title}</h3>
-              <p>{feature.body}</p>
+        <section className="kpi-grid">
+          {kpis.map((item) => (
+            <article key={item.label} className="panel kpi-card">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <em className={item.tone ? `tone-${item.tone}` : ''}>{item.delta}</em>
             </article>
           ))}
         </section>
 
-        <section className="workflow-section reveal" data-reveal id="workflow">
-          <div className="section-intro narrow">
-            <div className="eyebrow">How it works</div>
-            <h2>A better outbound motion starts before the first draft exists.</h2>
-          </div>
-
-          <div className="workflow-rail">
-            {workflow.map((item) => (
-              <article className="workflow-step" key={item.step}>
-                <span className="step-index">{item.step}</span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="product-story reveal" data-reveal id="product">
-          <div className="section-intro story-intro">
-            <div>
-              <div className="eyebrow">Product story</div>
-              <h2>Not a brochure mockup — a product narrative with real states, pacing, and operational depth.</h2>
-            </div>
-            <p>
-              Move through the workflow and see how Neal handles research, drafting, and live operations in one coherent interface system.
-            </p>
-          </div>
-
-          <div className="story-layout">
-            <div className="story-nav">
-              {storyCards.map((item) => (
-                <button
-                  key={item.id}
-                  className={item.id === activeStory ? 'story-tab active' : 'story-tab'}
-                  onClick={() => setActiveStory(item.id)}
-                >
-                  <span>{item.label}</span>
-                  <strong>{item.title}</strong>
-                  <p>{item.summary}</p>
-                </button>
-              ))}
-            </div>
-
-            <div className="story-stage">
-              <div className="product-frame story-frame">
-                <FrameHeader title={currentStory.label} label="Operator view" />
-                <div className="story-body">
-                  <aside className="story-sidebar">
-                    <div>
-                      <span className="sidebar-kicker">Current state</span>
-                      <h3>{currentStory.title}</h3>
-                    </div>
-                    <ul>
-                      {currentStory.bullets.map((bullet) => (
-                        <li key={bullet}>{bullet}</li>
-                      ))}
-                    </ul>
-                  </aside>
-
-                  <div className="story-canvas">
-                    <div className="story-metrics">
-                      {currentStory.metrics.map((metric) => (
-                        <StatCard key={metric.label} value={metric.value} label={metric.label} />
-                      ))}
-                    </div>
-
-                    <div className="canvas-shell">
-                      <div className="canvas-topline">
-                        <strong>{currentStory.summary}</strong>
-                        <span className="live-state">Live view</span>
-                      </div>
-                      <div className="canvas-panels">
-                        <div className="canvas-panel tall" />
-                        <div className="canvas-panel short" />
-                        <div className="canvas-panel short dim" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="teams-section reveal" data-reveal id="teams">
-          <div className="section-intro split-intro">
-            <div>
-              <div className="eyebrow">Who it is for</div>
-              <h2>Built for teams that treat outbound like an operating discipline.</h2>
-            </div>
-            <p>
-              Different teams use Neal differently, but the value stays the same: better source material, more control, and stronger consistency.
-            </p>
-          </div>
-
-          <div className="teams-layout">
-            <div className="team-tabs">
-              {useCases.map((item, index) => (
-                <button
-                  key={item.name}
-                  className={index === activeUseCase ? 'team-tab active' : 'team-tab'}
-                  onClick={() => setActiveUseCase(index)}
-                >
-                  <span>{item.name}</span>
-                  <strong>{item.title}</strong>
-                </button>
-              ))}
-            </div>
-
-            <div className="team-detail">
-              <span className="eyebrow subtle">{useCases[activeUseCase].name}</span>
-              <h3>{useCases[activeUseCase].title}</h3>
-              <p>{useCases[activeUseCase].body}</p>
-              <ul>
-                {useCases[activeUseCase].points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section className="testimonial-section reveal" data-reveal>
-          <div className="section-intro narrow">
-            <div className="eyebrow">Social proof</div>
-            <h2>High-signal teams use Neal when quality matters more than vanity volume.</h2>
-          </div>
-
-          <div className="testimonial-grid">
-            {testimonials.map((item) => (
-              <article className="testimonial-card" key={item.author}>
-                <p>“{item.quote}”</p>
-                <div>
-                  <strong>{item.author}</strong>
-                  <span>{item.role}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="pricing-section reveal" data-reveal id="pricing">
-          <div className="pricing-copy">
-            <div className="eyebrow">Pricing</div>
-            <h2>Start with a pilot. Expand once the workflow proves itself.</h2>
-            <p>
-              Bring one campaign, one persona set, and one operator team. Neal is designed to earn its place quickly before you scale the motion further.
-            </p>
-          </div>
-
-          <div className="pricing-card premium-card">
-            <span className="eyebrow subtle">Pilot</span>
-            <div className="price-row">
-              <strong>From €490</strong>
-              <span>/month</span>
-            </div>
-            <ul>
-              <li>Research-led campaign setup</li>
-              <li>Persona and proof configuration</li>
-              <li>Sequence workbench with approvals</li>
-              <li>Inbox and reply operations layer</li>
-            </ul>
-            <a className="button button-primary button-large full-width" href="#cta">
-              Request access
-            </a>
-          </div>
-        </section>
-
-        <section className="cta-section reveal" data-reveal id="cta">
-          <div>
-            <div className="eyebrow">Final CTA</div>
-            <h2>If your outbound matters, the system behind it should too.</h2>
-            <p>
-              Stop stitching together research tabs, prompt experiments, and sequencing tools. Run the motion from one premium operating layer.
-            </p>
-          </div>
-          <div className="hero-actions">
-            <a className="button button-primary button-large" href="#top">
-              Book demo
-            </a>
-            <a className="button button-secondary button-large" href="#product">
-              Explore product
-            </a>
-          </div>
-        </section>
+        {view === 'overview' && <OverviewView />}
+        {view === 'campaigns' && <CampaignView />}
+        {view === 'inboxes' && <InboxView />}
+        {view === 'replies' && <RepliesView />}
+        {view === 'pipeline' && <PipelineView />}
+        {view === 'todo' && <TodoView />}
       </main>
-
-      <footer className="footer" id="footer">
-        <div className="footer-brand">
-          <a className="brand" href="#top">
-            <span className="brand-mark">N</span>
-            <span className="brand-text">
-              <strong>Neal</strong>
-              <em>Research-led outreach infrastructure</em>
-            </span>
-          </a>
-          <p>Premium outbound systems for founders, RevOps teams, and agencies that care what gets sent.</p>
-        </div>
-
-        <div className="footer-columns">
-          <div>
-            <span>Explore</span>
-            <a href="#product">Product</a>
-            <a href="#workflow">Workflow</a>
-            <a href="#teams">Teams</a>
-          </div>
-          <div>
-            <span>Company</span>
-            <a href="#pricing">Pricing</a>
-            <a href="#cta">Book demo</a>
-            <a href="#top">Login</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
 
-function FrameHeader({ title, label, compact }: { title: string; label: string; compact?: boolean }) {
+function OverviewView() {
   return (
-    <div className={compact ? 'frame-header compact' : 'frame-header'}>
-      <div className="header-dots">
-        <span />
-        <span />
-        <span />
+    <div className="content-grid two-up">
+      <section className="panel hero-panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">Operator overview</span>
+            <h2>Everything that matters to run outbound without losing control.</h2>
+          </div>
+          <span className="status-chip good">MVP shell live</span>
+        </div>
+
+        <div className="hero-layout">
+          <div className="hero-column">
+            <div className="metric-band">
+              <Metric label="Live campaigns" value="3" />
+              <Metric label="Healthy inboxes" value="1 / 3" />
+              <Metric label="Queued work" value="12 jobs" />
+            </div>
+            <div className="narrative-block">
+              <strong>Why this rebuild happened</strong>
+              <p>
+                The old frontend looked premium but behaved like a brochure. The new direction is an execution surface: stateful, operator-visible, and aligned to how the backend actually works.
+              </p>
+            </div>
+          </div>
+
+          <div className="stack-list">
+            {backendTracks.map((track) => (
+              <article key={track.title} className="stack-card">
+                <strong>{track.title}</strong>
+                <p>{track.body}</p>
+                <ul>
+                  {track.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading compact-heading">
+          <div>
+            <span className="eyebrow">Reply pressure</span>
+            <h2>Priority threads</h2>
+          </div>
+          <span className="status-chip warn">7 awaiting action</span>
+        </div>
+        <div className="reply-list compact-list">
+          {replies.slice(0, 3).map((item) => (
+            <ReplyCard key={item.lead} item={item} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CampaignView() {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Campaign command</span>
+          <h2>Campaigns should show execution state, not just marketing intent.</h2>
+        </div>
+        <span className="status-chip neutral">Static data now → API next</span>
       </div>
-      <strong>{title}</strong>
-      <em>{label}</em>
-    </div>
+
+      <div className="table-list">
+        {campaigns.map((campaign) => (
+          <article key={campaign.name} className="table-row campaign-row">
+            <div>
+              <strong>{campaign.name}</strong>
+              <p>{campaign.objective}</p>
+            </div>
+            <div>
+              <span className={`status-pill ${campaign.status.toLowerCase()}`}>{campaign.status}</span>
+              <p>{campaign.sequence}</p>
+            </div>
+            <div>
+              <strong>{campaign.enrolled}</strong>
+              <p>enrolled</p>
+            </div>
+            <div>
+              <strong>{campaign.replies}</strong>
+              <p>replies</p>
+            </div>
+            <div>
+              <strong>{campaign.positiveRate}</strong>
+              <p>positive reply rate</p>
+            </div>
+            <div>
+              <strong>{campaign.owner}</strong>
+              <p>owner</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function StatCard({ value, label }: { value: string; label: string }) {
+function InboxView() {
   return (
-    <div className="stat-card">
-      <strong>{value}</strong>
+    <section className="content-grid three-up">
+      {inboxes.map((inbox) => (
+        <article key={inbox.address} className="panel inbox-card">
+          <div className="section-heading compact-heading">
+            <div>
+              <span className="eyebrow">{inbox.provider}</span>
+              <h2>{inbox.address}</h2>
+            </div>
+            <span className={`status-chip ${inbox.health === 'Healthy' ? 'good' : inbox.health === 'Degraded' ? 'warn' : 'bad'}`}>{inbox.health}</span>
+          </div>
+          <div className="inbox-metrics">
+            <Metric label="Sent today" value={inbox.sentToday} />
+            <Metric label="Daily cap" value={inbox.cap} />
+          </div>
+          <div className="narrative-block">
+            <strong>Pacing / notes</strong>
+            <p>{inbox.pacing}</p>
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function RepliesView() {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Reply operations</span>
+          <h2>Replies need triage, intent, and an obvious next action.</h2>
+        </div>
+        <span className="status-chip warn">Routing surface</span>
+      </div>
+      <div className="reply-list">
+        {replies.map((item) => (
+          <ReplyCard key={item.lead} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PipelineView() {
+  return (
+    <section className="content-grid two-up">
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">Build pipeline</span>
+            <h2>What was achieved</h2>
+          </div>
+        </div>
+        <ul className="timeline-list">
+          <li>Backend service scaffold, scheduler, storage abstraction, worker skeleton, and webhook enforcement are already in place.</li>
+          <li>Campaign stats, suppressions, reply ingestion pipeline, and job queue foundations exist in the backend.</li>
+          <li>Frontend has now been rebuilt from a landing page into an execution-oriented MVP shell.</li>
+        </ul>
+      </article>
+
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">Next execution window</span>
+            <h2>What happens next</h2>
+          </div>
+        </div>
+        <ul className="timeline-list">
+          <li>Freeze v1 API contracts for campaigns, inbox health, replies, and reporting.</li>
+          <li>Replace static frontend state with real fetchers and environment-based API configuration.</li>
+          <li>Build the first real operator workflows: campaign builder, reply routing, and inbox health drilldowns.</li>
+        </ul>
+      </article>
+    </section>
+  );
+}
+
+function TodoView() {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Execution todo</span>
+          <h2>Rebuild tasks after analysis</h2>
+        </div>
+      </div>
+      <div className="todo-list">
+        {todo.map((item) => (
+          <article key={item.title} className={item.done ? 'todo-item done' : 'todo-item'}>
+            <div className="todo-marker">{item.done ? '✓' : '•'}</div>
+            <div>
+              <strong>{item.title}</strong>
+              <p>{item.detail}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReplyCard({ item }: { item: ReplyThread }) {
+  return (
+    <article className="reply-card">
+      <div>
+        <span className="eyebrow">{item.company}</span>
+        <strong>{item.lead}</strong>
+      </div>
+      <div>
+        <span className={`intent-pill ${item.intent.toLowerCase().replace(/\s+/g, '-')}`}>{item.intent}</span>
+        <p>{item.status}</p>
+      </div>
+      <div>
+        <strong>{item.waited}</strong>
+        <p>waiting</p>
+      </div>
+      <div>
+        <strong>{item.action}</strong>
+        <p>next action</p>
+      </div>
+    </article>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metric-card">
       <span>{label}</span>
-    </div>
-  );
-}
-
-function QueueRow({ name, meta, strong, muted }: { name: string; meta: string; strong?: boolean; muted?: boolean }) {
-  return (
-    <div className={muted ? 'queue-row muted' : strong ? 'queue-row active' : 'queue-row'}>
-      <strong>{name}</strong>
-      <span>{meta}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
