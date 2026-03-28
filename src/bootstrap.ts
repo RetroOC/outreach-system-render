@@ -36,7 +36,7 @@ export function buildAppDeps(config: AppConfig): AppDeps {
   const aiRuntime = new AiRuntime(providers as Map<ProviderName, any>);
   const scheduler = new SchedulerService(storage);
   const queue: JobQueue = sqlClient ? new PostgresJobQueue(sqlClient) : new InMemoryJobQueue();
-  const outboundService = new OutboundService(storage, emailProviders.getDefault());
+  const outboundService = new OutboundService(storage, emailProviders);
   const workerRuntime = new WorkerRuntime(queue, scheduler, outboundService);
 
   return { storage, scheduler, aiRuntime, queue, outboundService, workerRuntime };

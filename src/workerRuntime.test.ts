@@ -6,21 +6,21 @@ import { SchedulerService } from "./scheduler.js";
 import { InMemoryJobQueue } from "./queue/inMemoryQueue.js";
 import { OutboundService } from "./services/outboundService.js";
 import { WorkerRuntime } from "./workerRuntime.js";
-import { MockEmailProvider } from "./providers/email/mockEmailProvider.js";
+import { EmailProviderRegistry } from "./providers/email/providerRegistry.js";
 
 test("worker runtime schedules and processes outbound message", async () => {
   const repo = new InMemoryRepo();
   const storage = new InMemoryStorage(repo);
   const scheduler = new SchedulerService(storage);
   const queue = new InMemoryJobQueue();
-  const outbound = new OutboundService(storage, new MockEmailProvider());
+  const outbound = new OutboundService(storage, new EmailProviderRegistry());
   const worker = new WorkerRuntime(queue, scheduler, outbound);
 
   const account = await storage.createAccount({ name: "Test", settings: {} });
   const inbox = await storage.createInbox({
     accountId: account.id,
     emailAddress: "test@example.com",
-    provider: "gmail",
+    provider: "mock-email",
     dailyLimit: 50,
     hourlyLimit: 10,
     minDelaySeconds: 0,

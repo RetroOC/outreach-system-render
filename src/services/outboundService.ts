@@ -1,10 +1,10 @@
 import type { Storage } from "../storage.js";
-import type { EmailProvider } from "../providers/email/types.js";
+import { EmailProviderRegistry } from "../providers/email/providerRegistry.js";
 
 export class OutboundService {
   constructor(
     private readonly storage: Storage,
-    private readonly emailProvider: EmailProvider,
+    private readonly emailProviders: EmailProviderRegistry,
   ) {}
 
   async processSendStepJob(payload: Record<string, unknown>): Promise<void> {
@@ -14,20 +14,23 @@ export class OutboundService {
 
     const campaign = await this.storage.getCampaignById(enrollment.campaignId);
     const lead = await this.storage.getLeadById(enrollment.leadId);
-    if (!campaign || !lead) throw new Error(`Missing campaign or lead for enrollment ${enrollmentId}`);
+    const inbox = await this.storage.getInboxById(enrollment.assignedInboxId);
+    if (!campaign || !lead || !inbox) throw new Error(`Missing campaign, lead, or inbox for enrollment ${enrollmentId}`);
 
     const step = campaign.steps[enrollment.currentStepIndex];
     if (!step) throw new Error(`No current step for enrollment ${enrollmentId}`);
 
+    const provider = this.emailProviders.get(inbox.provider) ?? this.emailProviders.getDefault();
     const thread = await this.findOrCreateThread(enrollment.id, lead.id, enrollment.assignedInboxId);
     const subject = this.render(step.subjectTemplate, lead);
     const bodyText = this.render(step.bodyTemplate, lead);
-    const sendResult = await this.emailProvider.send({
-      from: "noreply@example.com",
+    const sendResult = await provider.send({
+      from: inbox.displayName ? `${inbox.displayName} <${inbox.emailAddress}>` : inbox.emailAddress,
       to: lead.email,
       subject,
       text: bodyText,
       threadId: thread.id,
+      replyTo: inbox.emailAddress,
     });
 
     await this.storage.createMessage({
@@ -39,6 +42,32 @@ export class OutboundService {
       providerMessageId: sendResult.providerMessageId,
       sentAt: sendResult.acceptedAt,
     });
+
+    enrollment.lastOutboundSentAt = sendResult.acceptedAt;
+    await this.storage.updateEnrollment(enrollment);
+
+    inbox.sentToday += 1;
+    inbox.lastSyncAt = sendResult.acceptedAt;
+    await this.storage.updateInbox(inbox);
+  }
+
+  async sendTestEmail(input: { inboxId: string; to: string; subject: string; text: string; html?: string }): Promise<{ provider: string; providerMessageId: string; acceptedAt: string }> {
+    const inbox = await this.storage.getInboxById(input.inboxId);
+    if (!inbox) throw new Error(`Inbox not found: ${input.inboxId}`);
+    const provider = this.emailProviders.get(inbox.provider) ?? this.emailProviders.getDefault();
+    const result = await provider.send({
+      from: inbox.displayName ? `${inbox.displayName} <${inbox.emailAddress}>` : inbox.emailAddress,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+      replyTo: inbox.emailAddress,
+    });
+
+    inbox.sentToday += 1;
+    inbox.lastSyncAt = result.acceptedAt;
+    await this.storage.updateInbox(inbox);
+    return result;
   }
 
   async ingestInboundMessage(input: {
@@ -81,6 +110,7 @@ export class OutboundService {
   private render(template: string, lead: { firstName?: string; company?: string; email: string }) {
     return template
       .replaceAll("{{first_name}}", lead.firstName ?? "there")
+      .replaceAll("{{firstName}}", lead.firstName ?? "there")
       .replaceAll("{{company}}", lead.company ?? "your company")
       .replaceAll("{{email}}", lead.email);
   }

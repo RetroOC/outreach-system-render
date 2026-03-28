@@ -5,8 +5,10 @@ import { AiRuntime } from "./ai/runtime.js";
 import type { Storage } from "./storage.js";
 import type { JobQueue } from "./queue/types.js";
 import { verifyWebhookSignature } from "./http/webhooks.js";
+import { WorkerRuntime } from "./workerRuntime.js";
+import { OutboundService } from "./services/outboundService.js";
 
-export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime; queue: JobQueue }) {
+export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime; queue: JobQueue; workerRuntime: WorkerRuntime; outboundService: OutboundService }) {
   const { storage, scheduler, aiRuntime, queue } = deps;
 
   app.get("/health", async () => ({ ok: true }));
@@ -39,6 +41,16 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     inbox.authStatus = "connected";
     await storage.updateInbox(inbox);
     return { data: { inboxId: inbox.id, authStatus: inbox.authStatus } };
+  });
+
+  app.post("/inboxes/:inboxId/send-test", async (request, reply) => {
+    const params = z.object({ inboxId: z.string() }).parse(request.params);
+    const body = z.object({ to: z.string().email(), subject: z.string(), text: z.string(), html: z.string().optional() }).parse(request.body);
+    const inbox = await storage.getInboxById(params.inboxId);
+    if (!inbox) return { error: { code: "NOT_FOUND", message: "Inbox not found" } };
+    const result = await deps.outboundService.sendTestEmail({ inboxId: params.inboxId, ...body });
+    reply.code(201);
+    return { data: result };
   });
 
   app.get("/inboxes/:inboxId/health", async (request) => {
@@ -135,6 +147,7 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
   });
 
   app.post("/ops/scheduler/run", async () => ({ data: await scheduler.runDue() }));
+  app.post("/ops/worker/tick", async () => ({ data: await deps.workerRuntime.tick() }));
 
   app.post("/ops/jobs/enqueue", async (request, reply) => {
     const body = z.object({ kind: z.string(), payload: z.record(z.unknown()).default({}), availableAt: z.string().optional(), maxAttempts: z.number().int().positive().optional() }).parse(request.body);

@@ -12,6 +12,8 @@ This guide gets the prototype running fast.
   - lead creation
   - campaign creation
   - campaign listing by account
+  - Gmail test send (SMTP via Gmail app password)
+  - queued campaign-step sending via worker
 
 ## Option A — Run locally in 5–10 minutes
 
@@ -84,6 +86,9 @@ Set environment variables in Vercel:
 ```env
 PORT=3000
 API_KEY=change-me
+DEFAULT_EMAIL_PROVIDER=gmail
+GMAIL_USER=yourgmail@gmail.com
+GMAIL_APP_PASSWORD=your-16-char-app-password
 ```
 
 Optional if using Postgres:
@@ -117,11 +122,15 @@ npm run build && npm run start:worker
 2. set backend URL
 3. click **Check backend**
 4. create account
-5. create lead
-6. create campaign
-7. load campaigns
+5. create an inbox with provider `gmail`
+6. connect that inbox
+7. use `POST /inboxes/:inboxId/send-test` to send a real Gmail test email
+8. create lead(s)
+9. create campaign
+10. enroll leads into campaign with the Gmail inbox
+11. hit `POST /ops/worker/tick` (or run the worker) to send due campaign steps
 
-If all 7 work, the prototype is functional.
+If those work, the Gmail MVP is functional.
 
 ## Notes
 

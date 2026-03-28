@@ -17,6 +17,9 @@ export class EmailProviderRegistry {
   }
 
   getDefault(): EmailProvider {
+    if (process.env.DEFAULT_EMAIL_PROVIDER) {
+      return this.providers.get(process.env.DEFAULT_EMAIL_PROVIDER) ?? this.providers.get("mock-email")!;
+    }
     return this.providers.get("mock-email")!;
   }
 }
