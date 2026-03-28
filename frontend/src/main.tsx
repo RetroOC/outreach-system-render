@@ -1,333 +1,234 @@
-/// <reference types="vite/client" />
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
 
-type AppState = {
-  apiBase: string;
-  apiKey: string;
-};
+type Feature = { title: string; body: string };
+type Metric = { value: string; label: string };
+type Workflow = { step: string; title: string; body: string };
 
-type Account = { id: string; name: string; createdAt?: string };
-type Campaign = { id: string; name: string; status: string; objective?: string };
+type Testimonial = { quote: string; author: string; role: string };
 
-type ApiResult<T> = { data?: T; error?: { code: string; message: string } };
+const features: Feature[] = [
+  {
+    title: 'All outreach operations in one place',
+    body: 'Run campaigns, manage inboxes, monitor reply flow, and keep your outbound system controlled from one clean operating layer.',
+  },
+  {
+    title: 'Built for deliverability-aware scale',
+    body: 'Protect sender reputation with pacing logic, inbox controls, suppression handling, and stop-on-reply discipline.',
+  },
+  {
+    title: 'From lead to reply without workflow sprawl',
+    body: 'Move from targeting to sequence execution to reply handling without stitching together five different tools.',
+  },
+];
 
-const defaultApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-const defaultApiKey = import.meta.env.VITE_API_KEY || '';
+const metrics: Metric[] = [
+  { value: '1', label: 'platform for campaigns, inboxes, and replies' },
+  { value: '3x', label: 'clearer operator workflow than disconnected tools' },
+  { value: '0', label: 'need for scattered sequence + inbox + ops stacks' },
+];
+
+const workflow: Workflow[] = [
+  {
+    step: '01',
+    title: 'Set up the campaign',
+    body: 'Define the offer, audience, and sequence logic in a structured campaign workspace.',
+  },
+  {
+    step: '02',
+    title: 'Launch with control',
+    body: 'Run outreach through connected inboxes with visible pacing, health, and send-readiness states.',
+  },
+  {
+    step: '03',
+    title: 'Handle replies centrally',
+    body: 'See conversations, route intent, stop future sends when needed, and keep context tied to each campaign.',
+  },
+];
+
+const testimonials: Testimonial[] = [
+  {
+    quote: 'Finally feels like an outbound product built around operations, not just message sending.',
+    author: 'Revenue Lead',
+    role: 'B2B SaaS',
+  },
+  {
+    quote: 'The big win is clarity. Campaign state, inbox state, and reply state belong together.',
+    author: 'Founder',
+    role: 'Outbound-first startup',
+  },
+  {
+    quote: 'This is the kind of system teams actually want once volume starts creating complexity.',
+    author: 'Agency Operator',
+    role: 'Lead generation',
+  },
+];
 
 function App() {
-  const [config, setConfig] = React.useState<AppState>({ apiBase: defaultApiBase, apiKey: defaultApiKey });
-  const [connected, setConnected] = React.useState<string>('Not checked');
-  const [accounts, setAccounts] = React.useState<Account[]>([]);
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = React.useState('');
-  const [status, setStatus] = React.useState('Ready');
-
-  const [accountName, setAccountName] = React.useState('Neal Workspace');
-  const [leadForm, setLeadForm] = React.useState({ email: '', firstName: '', company: '' });
-  const [campaignForm, setCampaignForm] = React.useState({ name: 'New outbound campaign', objective: 'Book qualified calls' });
-
-  const headers = React.useMemo(() => {
-    const h: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (config.apiKey.trim()) h.Authorization = `Bearer ${config.apiKey.trim()}`;
-    return h;
-  }, [config]);
-
-  async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
-    const res = await fetch(`${config.apiBase}${path}`, {
-      ...init,
-      headers: {
-        ...headers,
-        ...(init?.headers || {}),
-      },
-    });
-    return res.json();
-  }
-
-  async function checkHealth() {
-    setStatus('Checking backend health...');
-    try {
-      const res = await request<{ ok: boolean }>('/health');
-      if (res.data?.ok) {
-        setConnected('Connected');
-        setStatus('Backend reachable.');
-      } else {
-        setConnected('Failed');
-        setStatus(res.error?.message || 'Health check failed');
-      }
-    } catch (error) {
-      setConnected('Failed');
-      setStatus(error instanceof Error ? error.message : 'Connection failed');
-    }
-  }
-
-  async function createAccount() {
-    setStatus('Creating account...');
-    try {
-      const res = await request<Account>('/accounts', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ name: accountName, settings: {} }),
-      });
-      if (res.data) {
-        const next = [res.data, ...accounts];
-        setAccounts(next);
-        setSelectedAccountId(res.data.id);
-        setStatus(`Account created: ${res.data.name}`);
-      } else {
-        setStatus(res.error?.message || 'Failed to create account');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create account');
-    }
-  }
-
-  async function loadCampaigns(accountId: string) {
-    if (!accountId) return;
-    setStatus('Loading campaigns...');
-    try {
-      const res = await request<Campaign[]>(`/campaigns?accountId=${encodeURIComponent(accountId)}`);
-      setCampaigns(res.data || []);
-      setStatus('Campaigns loaded.');
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to load campaigns');
-    }
-  }
-
-  async function createLead() {
-    if (!selectedAccountId) {
-      setStatus('Create/select an account first.');
-      return;
-    }
-    setStatus('Creating lead...');
-    try {
-      const res = await request('/leads', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({
-          accountId: selectedAccountId,
-          email: leadForm.email,
-          firstName: leadForm.firstName || undefined,
-          company: leadForm.company || undefined,
-          customFields: {},
-        }),
-      });
-      if (res.data) {
-        setLeadForm({ email: '', firstName: '', company: '' });
-        setStatus('Lead created successfully.');
-      } else {
-        setStatus(res.error?.message || 'Failed to create lead');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create lead');
-    }
-  }
-
-  async function createCampaign() {
-    if (!selectedAccountId) {
-      setStatus('Create/select an account first.');
-      return;
-    }
-    setStatus('Creating campaign...');
-    try {
-      const res = await request<Campaign>('/campaigns', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({
-          accountId: selectedAccountId,
-          name: campaignForm.name,
-          objective: campaignForm.objective,
-          status: 'draft',
-          settings: {},
-          steps: [
-            {
-              stepNumber: 1,
-              type: 'email',
-              delay: { kind: 'after_enrollment', amount: 0, unit: 'minutes' },
-              subjectTemplate: 'Quick question, {{firstName}}',
-              bodyTemplate: 'Hi {{firstName}}, wanted to reach out about {{company}}.',
-            },
-            {
-              stepNumber: 2,
-              type: 'email',
-              delay: { kind: 'after_previous_sent', amount: 3, unit: 'days' },
-              subjectTemplate: 'Following up',
-              bodyTemplate: 'Just circling back here.',
-            },
-          ],
-        }),
-      });
-      if (res.data) {
-        setCampaigns([res.data, ...campaigns]);
-        setStatus(`Campaign created: ${res.data.name}`);
-      } else {
-        setStatus(res.error?.message || 'Failed to create campaign');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create campaign');
-    }
-  }
-
   return (
-    <div className="app-shell">
-      <header className="hero">
-        <div>
-          <span className="eyebrow">Working prototype</span>
-          <h1>Outreach system prototype you can actually use in the next hour.</h1>
-          <p>
-            This prototype connects to the existing outreach-core API and gives you simple working flows for backend health,
-            account creation, lead creation, and campaign creation.
-          </p>
-        </div>
-        <div className="hero-card">
-          <span>Prototype scope</span>
-          <strong>Health · Accounts · Leads · Campaigns</strong>
-          <p>Designed for speed, clarity, and immediate deployability.</p>
+    <div className="page-shell">
+      <header className="topbar">
+        <a className="brand" href="#top">
+          <span className="brand-mark">N</span>
+          <span className="brand-copy">
+            <strong>Neal</strong>
+            <em>Outreach operating system</em>
+          </span>
+        </a>
+
+        <nav className="nav">
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#proof">Proof</a>
+          <a href="#cta">Get started</a>
+        </nav>
+
+        <div className="topbar-actions">
+          <a className="button button-ghost" href="/signin">Sign in</a>
+          <a className="button button-primary" href="/signup">Sign up</a>
         </div>
       </header>
 
-      <main className="grid">
-        <section className="panel">
-          <div className="panel-head">
+      <main className="page" id="top">
+        <section className="hero-section">
+          <div className="hero-copy">
+            <span className="eyebrow">Research-led outbound infrastructure</span>
+            <h1>Launch, manage, and scale outbound from one clean operating system.</h1>
+            <p className="hero-lede">
+              Neal helps teams run campaigns, manage inboxes, protect deliverability, and handle replies without relying on a messy stack of disconnected tools.
+            </p>
+            <div className="hero-actions">
+              <a className="button button-primary button-large" href="/signup">Sign up</a>
+              <a className="button button-secondary button-large" href="/signin">Sign in</a>
+            </div>
+            <div className="hero-subnote">
+              Built for founders, operators, and teams that want better control over outbound execution.
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="ui-window primary-window">
+              <div className="ui-header">
+                <span />
+                <span />
+                <span />
+                <strong>Campaign overview</strong>
+              </div>
+              <div className="ui-grid">
+                <div className="ui-panel wide">
+                  <span className="panel-label">Campaign</span>
+                  <strong>Tanzania UHNI acquisition</strong>
+                  <p>4-step sequence · buyer-side advisory angle · review ready</p>
+                </div>
+                <div className="stat-card">
+                  <strong>112</strong>
+                  <span>enrolled leads</span>
+                </div>
+                <div className="stat-card">
+                  <strong>61%</strong>
+                  <span>capacity remaining</span>
+                </div>
+                <div className="stat-card">
+                  <strong>7</strong>
+                  <span>replies to route</span>
+                </div>
+                <div className="stat-card">
+                  <strong>Healthy</strong>
+                  <span>sender state</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="floating-box left-box">
+              <span className="panel-label">Replies</span>
+              <strong>Interested lead detected</strong>
+              <p>Owner assignment and next action ready.</p>
+            </div>
+
+            <div className="floating-box right-box">
+              <span className="panel-label">Inbox health</span>
+              <strong>Safe sending window</strong>
+              <p>Pacing and caps within limits.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="metrics-strip">
+          {metrics.map((metric) => (
+            <article key={metric.label} className="metric-block">
+              <strong>{metric.value}</strong>
+              <p>{metric.label}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="features-section" id="features">
+          <div className="section-heading">
+            <span className="eyebrow">Why Neal</span>
+            <h2>A serious outbound system should feel controlled, not improvised.</h2>
+          </div>
+          <div className="feature-grid">
+            {features.map((feature) => (
+              <article key={feature.title} className="feature-card">
+                <h3>{feature.title}</h3>
+                <p>{feature.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="workflow-section" id="workflow">
+          <div className="section-heading split-heading">
             <div>
-              <span className="eyebrow">1. Configure</span>
-              <h2>Backend connection</h2>
+              <span className="eyebrow">How it works</span>
+              <h2>Everything from campaign setup to reply handling in one workflow.</h2>
             </div>
-            <span className={connected === 'Connected' ? 'badge success' : connected === 'Failed' ? 'badge danger' : 'badge'}>{connected}</span>
+            <p>
+              Neal is designed to reduce operator friction while keeping campaign logic, inbox discipline, and reply visibility in the same system.
+            </p>
           </div>
-          <div className="form-grid">
-            <label>
-              API base URL
-              <input value={config.apiBase} onChange={(e) => setConfig({ ...config, apiBase: e.target.value })} placeholder="http://localhost:3000" />
-            </label>
-            <label>
-              API key
-              <input value={config.apiKey} onChange={(e) => setConfig({ ...config, apiKey: e.target.value })} placeholder="Optional bearer token" />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="button primary" onClick={checkHealth}>Check backend</button>
+          <div className="workflow-grid">
+            {workflow.map((item) => (
+              <article key={item.step} className="workflow-card">
+                <span>{item.step}</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
           </div>
         </section>
 
-        <section className="panel two-col">
-          <div>
-            <div className="panel-head">
-              <div>
-                <span className="eyebrow">2. Workspace</span>
-                <h2>Create account</h2>
-              </div>
-            </div>
-            <label>
-              Account name
-              <input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
-            </label>
-            <div className="actions">
-              <button className="button primary" onClick={createAccount}>Create account</button>
-            </div>
+        <section className="proof-section" id="proof">
+          <div className="section-heading">
+            <span className="eyebrow">Proof</span>
+            <h2>Built for teams that care about message quality, operational control, and scaling without chaos.</h2>
           </div>
-
-          <div>
-            <div className="panel-head">
-              <div>
-                <span className="eyebrow">Current account</span>
-                <h2>Select active account</h2>
-              </div>
-            </div>
-            <label>
-              Account
-              <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
-                <option value="">Choose account</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name}</option>
-                ))}
-              </select>
-            </label>
-            <div className="actions">
-              <button className="button secondary" onClick={() => loadCampaigns(selectedAccountId)}>Load campaigns</button>
-            </div>
+          <div className="testimonial-grid">
+            {testimonials.map((item) => (
+              <article key={item.author} className="testimonial-card">
+                <p>“{item.quote}”</p>
+                <div>
+                  <strong>{item.author}</strong>
+                  <span>{item.role}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
-        <section className="panel two-col">
+        <section className="cta-section" id="cta">
           <div>
-            <div className="panel-head">
-              <div>
-                <span className="eyebrow">3. Leads</span>
-                <h2>Create lead</h2>
-              </div>
-            </div>
-            <label>
-              Email
-              <input value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} placeholder="maya@northstar.com" />
-            </label>
-            <label>
-              First name
-              <input value={leadForm.firstName} onChange={(e) => setLeadForm({ ...leadForm, firstName: e.target.value })} placeholder="Maya" />
-            </label>
-            <label>
-              Company
-              <input value={leadForm.company} onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })} placeholder="Northstar" />
-            </label>
-            <div className="actions">
-              <button className="button primary" onClick={createLead}>Create lead</button>
-            </div>
+            <span className="eyebrow">Get started</span>
+            <h2>Start using a cleaner outbound system.</h2>
+            <p>
+              Set up campaigns, connect inboxes, and run reply-aware outbound from a product that is built to stay legible as you grow.
+            </p>
           </div>
-
-          <div>
-            <div className="panel-head">
-              <div>
-                <span className="eyebrow">4. Campaigns</span>
-                <h2>Create campaign</h2>
-              </div>
-            </div>
-            <label>
-              Campaign name
-              <input value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
-            </label>
-            <label>
-              Objective
-              <input value={campaignForm.objective} onChange={(e) => setCampaignForm({ ...campaignForm, objective: e.target.value })} />
-            </label>
-            <div className="actions">
-              <button className="button primary" onClick={createCampaign}>Create campaign</button>
-            </div>
+          <div className="hero-actions">
+            <a className="button button-primary button-large" href="/signup">Sign up</a>
+            <a className="button button-secondary button-large" href="/signin">Sign in</a>
           </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">5. Campaign list</span>
-              <h2>Campaigns in selected account</h2>
-            </div>
-          </div>
-          {campaigns.length === 0 ? (
-            <div className="empty-state">No campaigns loaded yet.</div>
-          ) : (
-            <div className="list">
-              {campaigns.map((campaign) => (
-                <article key={campaign.id} className="list-item">
-                  <div>
-                    <strong>{campaign.name}</strong>
-                    <p>{campaign.objective || 'No objective set'}</p>
-                  </div>
-                  <span className="badge">{campaign.status}</span>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Status</span>
-              <h2>Run log</h2>
-            </div>
-          </div>
-          <div className="status-box">{status}</div>
         </section>
       </main>
     </div>
