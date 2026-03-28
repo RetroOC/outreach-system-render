@@ -1,370 +1,335 @@
+/// <reference types="vite/client" />
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
 
-type NavItem = { label: string; href: string };
-type Stat = { value: string; label: string };
-type Feature = { title: string; body: string; bullets: string[] };
-type WorkflowStep = { step: string; title: string; body: string };
-type Card = { title: string; body: string; tag: string };
-type Testimonial = { quote: string; author: string; role: string };
-type Faq = { question: string; answer: string };
+type AppState = {
+  apiBase: string;
+  apiKey: string;
+};
 
-const nav: NavItem[] = [
-  { label: 'Product', href: '#product' },
-  { label: 'Why Neal', href: '#why' },
-  { label: 'Proof', href: '#proof' },
-  { label: 'Pricing', href: '#pricing' },
-];
+type Account = { id: string; name: string; createdAt?: string };
+type Campaign = { id: string; name: string; status: string; objective?: string };
 
-const stats: Stat[] = [
-  { value: '20+', label: 'operator controls built into campaign execution' },
-  { value: '1', label: 'system for research, sequencing, inboxes, and replies' },
-  { value: '0', label: 'need to juggle five disconnected outbound tools' },
-];
+type ApiResult<T> = { data?: T; error?: { code: string; message: string } };
 
-const features: Feature[] = [
-  {
-    title: 'Build campaigns from research, not from vibes',
-    body: 'Neal is designed to keep lead context, positioning, proof, and send logic attached from planning through launch.',
-    bullets: ['Research-backed sequence framing', 'Reusable campaign logic', 'Clear review before launch'],
-  },
-  {
-    title: 'Protect deliverability while you scale',
-    body: 'Inbox limits, warmup-aware sending, suppression logic, and reply-triggered stops are part of the operating model—not afterthoughts.',
-    bullets: ['Daily caps and pacing controls', 'Stop-on-reply enforcement', 'Suppression and unsubscribe protection'],
-  },
-  {
-    title: 'Run live replies from one surface',
-    body: 'Instead of losing context in inbox chaos, operators can triage replies, assign owners, and keep campaign state tied to every conversation.',
-    bullets: ['Central reply queue', 'Intent routing and next actions', 'Campaign-linked thread context'],
-  },
-];
-
-const workflow: WorkflowStep[] = [
-  { step: '01', title: 'Define the target and buying angle', body: 'Lock ICP, offer, objections, proof, exclusions, and desired CTA before the first sequence is drafted.' },
-  { step: '02', title: 'Build the sequence with operator guardrails', body: 'Create structured steps, sending windows, inbox assignment logic, and review states around each campaign.' },
-  { step: '03', title: 'Launch without losing inbox quality', body: 'Send through controlled pacing, mailbox rotation, and deliverability-aware infrastructure that stays visible.' },
-  { step: '04', title: 'Route replies and improve the system', body: 'Classify intent, stop future sends when needed, and improve campaigns from actual operating data.' },
-];
-
-const productCards: Card[] = [
-  {
-    tag: 'Campaign command',
-    title: 'See campaign state, sequence structure, and send readiness in one place.',
-    body: 'The homepage should communicate system confidence. So the product story here shows structure, not abstract marketing fluff.',
-  },
-  {
-    tag: 'Reply operations',
-    title: 'Handle hot replies, objections, OOO, and unsubscribes without context switching.',
-    body: 'Operators need a live operations layer that feels controlled and legible, especially once multiple inboxes and campaigns are running.',
-  },
-  {
-    tag: 'Inbox health',
-    title: 'Track mailbox pressure, capacity, and pacing before deliverability becomes a fire drill.',
-    body: 'A serious outbound product should visually reassure the buyer that scaling does not mean reckless sending.',
-  },
-];
-
-const testimonials: Testimonial[] = [
-  {
-    quote: 'This feels much closer to a real outbound operating system than another sequence tool with AI sprinkled on top.',
-    author: 'Revenue operator',
-    role: 'Mid-market SaaS',
-  },
-  {
-    quote: 'The best part is the framing: campaign logic, inbox controls, and reply handling are treated like the product, not hidden implementation details.',
-    author: 'Outbound consultant',
-    role: 'Agency lead',
-  },
-  {
-    quote: 'If deliverability, sequencing, and reply context live together, the team can finally scale without losing discipline.',
-    author: 'Founder',
-    role: 'B2B services company',
-  },
-];
-
-const faqs: Faq[] = [
-  {
-    question: 'What is Neal supposed to replace?',
-    answer: 'Neal is meant to reduce the sprawl between outreach planning docs, sequencing tools, inbox operations, and reply management. The direction is one coherent outbound operating layer rather than five partially connected tools.',
-  },
-  {
-    question: 'How is it different from lemlist or Smartlead?',
-    answer: 'Those tools are strong references for conversion-focused positioning and clear product communication. Neal’s differentiator is the deeper emphasis on operator control, architecture clarity, and a backend-first system that can support custom workflows inside OpenClaw.',
-  },
-  {
-    question: 'Is the product fully live today?',
-    answer: 'The backend foundation exists and the frontend is being rebuilt in public. The landing page is now designed to match the quality bar of modern outbound SaaS sites, while the app itself continues to be wired to real backend endpoints.',
-  },
-  {
-    question: 'Who is this for first?',
-    answer: 'Founders, lean GTM teams, operators, and agencies that care about relevance, control, and trust—not just sending more volume.',
-  },
-];
+const defaultApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const defaultApiKey = import.meta.env.VITE_API_KEY || '';
 
 function App() {
+  const [config, setConfig] = React.useState<AppState>({ apiBase: defaultApiBase, apiKey: defaultApiKey });
+  const [connected, setConnected] = React.useState<string>('Not checked');
+  const [accounts, setAccounts] = React.useState<Account[]>([]);
+  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = React.useState('');
+  const [status, setStatus] = React.useState('Ready');
+
+  const [accountName, setAccountName] = React.useState('Neal Workspace');
+  const [leadForm, setLeadForm] = React.useState({ email: '', firstName: '', company: '' });
+  const [campaignForm, setCampaignForm] = React.useState({ name: 'New outbound campaign', objective: 'Book qualified calls' });
+
+  const headers = React.useMemo(() => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (config.apiKey.trim()) h.Authorization = `Bearer ${config.apiKey.trim()}`;
+    return h;
+  }, [config]);
+
+  async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+    const res = await fetch(`${config.apiBase}${path}`, {
+      ...init,
+      headers: {
+        ...headers,
+        ...(init?.headers || {}),
+      },
+    });
+    return res.json();
+  }
+
+  async function checkHealth() {
+    setStatus('Checking backend health...');
+    try {
+      const res = await request<{ ok: boolean }>('/health');
+      if (res.data?.ok) {
+        setConnected('Connected');
+        setStatus('Backend reachable.');
+      } else {
+        setConnected('Failed');
+        setStatus(res.error?.message || 'Health check failed');
+      }
+    } catch (error) {
+      setConnected('Failed');
+      setStatus(error instanceof Error ? error.message : 'Connection failed');
+    }
+  }
+
+  async function createAccount() {
+    setStatus('Creating account...');
+    try {
+      const res = await request<Account>('/accounts', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({ name: accountName, settings: {} }),
+      });
+      if (res.data) {
+        const next = [res.data, ...accounts];
+        setAccounts(next);
+        setSelectedAccountId(res.data.id);
+        setStatus(`Account created: ${res.data.name}`);
+      } else {
+        setStatus(res.error?.message || 'Failed to create account');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create account');
+    }
+  }
+
+  async function loadCampaigns(accountId: string) {
+    if (!accountId) return;
+    setStatus('Loading campaigns...');
+    try {
+      const res = await request<Campaign[]>(`/campaigns?accountId=${encodeURIComponent(accountId)}`);
+      setCampaigns(res.data || []);
+      setStatus('Campaigns loaded.');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to load campaigns');
+    }
+  }
+
+  async function createLead() {
+    if (!selectedAccountId) {
+      setStatus('Create/select an account first.');
+      return;
+    }
+    setStatus('Creating lead...');
+    try {
+      const res = await request('/leads', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          accountId: selectedAccountId,
+          email: leadForm.email,
+          firstName: leadForm.firstName || undefined,
+          company: leadForm.company || undefined,
+          customFields: {},
+        }),
+      });
+      if (res.data) {
+        setLeadForm({ email: '', firstName: '', company: '' });
+        setStatus('Lead created successfully.');
+      } else {
+        setStatus(res.error?.message || 'Failed to create lead');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create lead');
+    }
+  }
+
+  async function createCampaign() {
+    if (!selectedAccountId) {
+      setStatus('Create/select an account first.');
+      return;
+    }
+    setStatus('Creating campaign...');
+    try {
+      const res = await request<Campaign>('/campaigns', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          accountId: selectedAccountId,
+          name: campaignForm.name,
+          objective: campaignForm.objective,
+          status: 'draft',
+          settings: {},
+          steps: [
+            {
+              stepNumber: 1,
+              type: 'email',
+              delay: { kind: 'after_enrollment', amount: 0, unit: 'minutes' },
+              subjectTemplate: 'Quick question, {{firstName}}',
+              bodyTemplate: 'Hi {{firstName}}, wanted to reach out about {{company}}.',
+            },
+            {
+              stepNumber: 2,
+              type: 'email',
+              delay: { kind: 'after_previous_sent', amount: 3, unit: 'days' },
+              subjectTemplate: 'Following up',
+              bodyTemplate: 'Just circling back here.',
+            },
+          ],
+        }),
+      });
+      if (res.data) {
+        setCampaigns([res.data, ...campaigns]);
+        setStatus(`Campaign created: ${res.data.name}`);
+      } else {
+        setStatus(res.error?.message || 'Failed to create campaign');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create campaign');
+    }
+  }
+
   return (
-    <div className="page-shell">
-      <div className="bg-orb orb-a" />
-      <div className="bg-orb orb-b" />
-
-      <header className="topbar">
-        <a className="brand" href="#top">
-          <span className="brand-mark">N</span>
-          <span className="brand-copy">
-            <strong>Neal</strong>
-            <em>Outbound operating system</em>
-          </span>
-        </a>
-
-        <nav className="nav">
-          {nav.map((item) => (
-            <a key={item.label} href={item.href}>{item.label}</a>
-          ))}
-        </nav>
-
-        <div className="topbar-actions">
-          <a className="text-link" href="#proof">See proof</a>
-          <a className="button button-primary" href="#cta">Book demo</a>
+    <div className="app-shell">
+      <header className="hero">
+        <div>
+          <span className="eyebrow">Working prototype</span>
+          <h1>Outreach system prototype you can actually use in the next hour.</h1>
+          <p>
+            This prototype connects to the existing outreach-core API and gives you simple working flows for backend health,
+            account creation, lead creation, and campaign creation.
+          </p>
+        </div>
+        <div className="hero-card">
+          <span>Prototype scope</span>
+          <strong>Health · Accounts · Leads · Campaigns</strong>
+          <p>Designed for speed, clarity, and immediate deployability.</p>
         </div>
       </header>
 
-      <main id="top" className="page">
-        <section className="hero-section">
-          <div className="hero-copy">
-            <span className="eyebrow">Research-led outreach infrastructure</span>
-            <h1>Run outbound from one system that actually respects relevance, deliverability, and reply operations.</h1>
-            <p className="hero-lede">
-              Neal is being built for teams that want more than a sequence sender. Plan campaigns, control inboxes, route replies, and scale outreach without turning the workflow brittle.
-            </p>
-            <div className="hero-actions">
-              <a className="button button-primary button-large" href="#cta">Book a demo</a>
-              <a className="button button-secondary button-large" href="#product">See the product story</a>
-            </div>
-            <div className="hero-proof">
-              <span>Inspired by the best parts of lemlist and Smartlead:</span>
-              <strong>clear positioning, visible workflow, repeated CTAs, and product-led proof.</strong>
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="visual-card main-visual">
-              <div className="visual-head">
-                <span className="dot" />
-                <span className="dot" />
-                <span className="dot" />
-                <strong>Campaign command center</strong>
-              </div>
-              <div className="visual-grid">
-                <div className="visual-panel wide">
-                  <span className="mini-label">Campaign thesis</span>
-                  <p>
-                    High-trust outreach for premium buyers requires stronger proof, cleaner targeting, and more disciplined inbox handling than generic volume tools provide.
-                  </p>
-                </div>
-                <Metric value="4-step" label="sequence structure" />
-                <Metric value="61%" label="safe inbox capacity" />
-                <Metric value="7" label="replies awaiting action" />
-                <Metric value="Ready" label="launch state" />
-              </div>
-            </div>
-
-            <div className="floating-card left-card">
-              <span className="mini-label">Reply queue</span>
-              <strong>Interested lead needs owner assignment</strong>
-              <p>Thread linked to campaign, inbox, and next action.</p>
-            </div>
-
-            <div className="floating-card right-card">
-              <span className="mini-label">Inbox health</span>
-              <strong>Daily cap respected</strong>
-              <p>Warmup-aware pacing with suppression safeguards.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="logo-strip">
-          <span>Built for the quality bar set by serious outbound SaaS</span>
-          <div className="logo-row">
-            <span>Lemlist-level clarity</span>
-            <span>Smartlead-style system proof</span>
-            <span>Operator-first workflow</span>
-            <span>Backend-driven product story</span>
-          </div>
-        </section>
-
-        <section className="stats-strip" id="why">
-          {stats.map((item) => (
-            <article key={item.label} className="stat-block">
-              <strong>{item.value}</strong>
-              <p>{item.label}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="split-section">
-          <div className="section-copy">
-            <span className="eyebrow">Why the last version was wrong</span>
-            <h2>The last site looked like an internal dashboard. Competitor homepages convert because they tell a sharper story.</h2>
-          </div>
-          <div className="compare-grid">
-            <article className="compare-card bad-card">
-              <span>What I did before</span>
-              <strong>Built a product shell first.</strong>
-              <p>Useful for app direction, wrong for a homepage. It asked visitors to understand the internals before trusting the product.</p>
-            </article>
-            <article className="compare-card good-card">
-              <span>What this rebuild does</span>
-              <strong>Leads with value, proof, workflow, and credibility.</strong>
-              <p>That is what strong SaaS landing pages do: clear promise, strong CTA, product snapshots, proof, repeated conversion moments.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="feature-section">
-          <div className="section-heading">
-            <span className="eyebrow">Why teams will care</span>
-            <h2>Neal is positioned as a serious outbound operating layer, not just another cold email sender.</h2>
-          </div>
-          <div className="feature-grid">
-            {features.map((feature) => (
-              <article key={feature.title} className="feature-card">
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
-                <ul>
-                  {feature.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="workflow-section" id="product">
-          <div className="section-heading split-heading">
+      <main className="grid">
+        <section className="panel">
+          <div className="panel-head">
             <div>
-              <span className="eyebrow">How it works</span>
-              <h2>A cleaner, competitor-grade structure: promise → workflow → proof → CTA.</h2>
+              <span className="eyebrow">1. Configure</span>
+              <h2>Backend connection</h2>
             </div>
-            <p>
-              This section exists because lemlist and Smartlead both do a good job of reducing complexity into obvious operating steps. Neal should do the same.
-            </p>
+            <span className={connected === 'Connected' ? 'badge success' : connected === 'Failed' ? 'badge danger' : 'badge'}>{connected}</span>
           </div>
-          <div className="workflow-grid">
-            {workflow.map((item) => (
-              <article key={item.step} className="workflow-card">
-                <span>{item.step}</span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
+          <div className="form-grid">
+            <label>
+              API base URL
+              <input value={config.apiBase} onChange={(e) => setConfig({ ...config, apiBase: e.target.value })} placeholder="http://localhost:3000" />
+            </label>
+            <label>
+              API key
+              <input value={config.apiKey} onChange={(e) => setConfig({ ...config, apiKey: e.target.value })} placeholder="Optional bearer token" />
+            </label>
           </div>
-        </section>
-
-        <section className="product-story-section">
-          <div className="section-heading split-heading">
-            <div>
-              <span className="eyebrow">Product story</span>
-              <h2>Show enough of the product to feel real, without turning the homepage into the app.</h2>
-            </div>
-            <p>
-              That balance is where good SaaS pages win. They show confidence, structure, and workflow without overwhelming the visitor.
-            </p>
-          </div>
-          <div className="product-card-grid">
-            {productCards.map((card) => (
-              <article key={card.title} className="product-card">
-                <span>{card.tag}</span>
-                <strong>{card.title}</strong>
-                <p>{card.body}</p>
-                <div className="product-placeholder" />
-              </article>
-            ))}
+          <div className="actions">
+            <button className="button primary" onClick={checkHealth}>Check backend</button>
           </div>
         </section>
 
-        <section className="testimonial-section" id="proof">
-          <div className="section-heading">
-            <span className="eyebrow">Why this style was chosen</span>
-            <h2>Because modern outbound SaaS pages work when they feel direct, structured, and legible.</h2>
-          </div>
-          <div className="testimonial-grid">
-            {testimonials.map((item) => (
-              <article key={item.author} className="testimonial-card">
-                <p>“{item.quote}”</p>
-                <div>
-                  <strong>{item.author}</strong>
-                  <span>{item.role}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="pricing-section" id="pricing">
-          <div className="pricing-copy">
-            <span className="eyebrow">Pricing</span>
-            <h2>Start with a focused pilot. Expand once the system proves itself.</h2>
-            <p>
-              The right move here is not fake enterprise bloat. It is a crisp offer, a clear call to action, and confidence that the product is being built around real outbound operations.
-            </p>
-          </div>
-          <article className="pricing-card">
-            <span className="plan-tag">Pilot</span>
-            <div className="price-row">
-              <strong>From €490</strong>
-              <span>/ month</span>
-            </div>
-            <ul>
-              <li>Research-led campaign setup</li>
-              <li>Operator-facing workflow and controls</li>
-              <li>Inbox health and reply operations direction</li>
-              <li>Backend-driven rebuild path inside OpenClaw</li>
-            </ul>
-            <a className="button button-primary button-large full-width" href="#cta">Request access</a>
-          </article>
-        </section>
-
-        <section className="faq-section">
-          <div className="section-heading">
-            <span className="eyebrow">FAQ</span>
-            <h2>Questions a buyer will actually have</h2>
-          </div>
-          <div className="faq-list">
-            {faqs.map((item) => (
-              <article key={item.question} className="faq-item">
-                <strong>{item.question}</strong>
-                <p>{item.answer}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="cta-section" id="cta">
+        <section className="panel two-col">
           <div>
-            <span className="eyebrow">Final CTA</span>
-            <h2>If outbound matters, the system behind it should feel like a real product—not a patched-together stack.</h2>
-            <p>
-              This rebuild aims to meet the quality bar set by the best SaaS landing pages in the category while still sounding like Neal.
-            </p>
+            <div className="panel-head">
+              <div>
+                <span className="eyebrow">2. Workspace</span>
+                <h2>Create account</h2>
+              </div>
+            </div>
+            <label>
+              Account name
+              <input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+            </label>
+            <div className="actions">
+              <button className="button primary" onClick={createAccount}>Create account</button>
+            </div>
           </div>
-          <div className="hero-actions">
-            <a className="button button-primary button-large" href="#top">Book demo</a>
-            <a className="button button-secondary button-large" href="#product">See product story</a>
+
+          <div>
+            <div className="panel-head">
+              <div>
+                <span className="eyebrow">Current account</span>
+                <h2>Select active account</h2>
+              </div>
+            </div>
+            <label>
+              Account
+              <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
+                <option value="">Choose account</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name}</option>
+                ))}
+              </select>
+            </label>
+            <div className="actions">
+              <button className="button secondary" onClick={() => loadCampaigns(selectedAccountId)}>Load campaigns</button>
+            </div>
           </div>
+        </section>
+
+        <section className="panel two-col">
+          <div>
+            <div className="panel-head">
+              <div>
+                <span className="eyebrow">3. Leads</span>
+                <h2>Create lead</h2>
+              </div>
+            </div>
+            <label>
+              Email
+              <input value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} placeholder="maya@northstar.com" />
+            </label>
+            <label>
+              First name
+              <input value={leadForm.firstName} onChange={(e) => setLeadForm({ ...leadForm, firstName: e.target.value })} placeholder="Maya" />
+            </label>
+            <label>
+              Company
+              <input value={leadForm.company} onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })} placeholder="Northstar" />
+            </label>
+            <div className="actions">
+              <button className="button primary" onClick={createLead}>Create lead</button>
+            </div>
+          </div>
+
+          <div>
+            <div className="panel-head">
+              <div>
+                <span className="eyebrow">4. Campaigns</span>
+                <h2>Create campaign</h2>
+              </div>
+            </div>
+            <label>
+              Campaign name
+              <input value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
+            </label>
+            <label>
+              Objective
+              <input value={campaignForm.objective} onChange={(e) => setCampaignForm({ ...campaignForm, objective: e.target.value })} />
+            </label>
+            <div className="actions">
+              <button className="button primary" onClick={createCampaign}>Create campaign</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">5. Campaign list</span>
+              <h2>Campaigns in selected account</h2>
+            </div>
+          </div>
+          {campaigns.length === 0 ? (
+            <div className="empty-state">No campaigns loaded yet.</div>
+          ) : (
+            <div className="list">
+              {campaigns.map((campaign) => (
+                <article key={campaign.id} className="list-item">
+                  <div>
+                    <strong>{campaign.name}</strong>
+                    <p>{campaign.objective || 'No objective set'}</p>
+                  </div>
+                  <span className="badge">{campaign.status}</span>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Status</span>
+              <h2>Run log</h2>
+            </div>
+          </div>
+          <div className="status-box">{status}</div>
         </section>
       </main>
-    </div>
-  );
-}
-
-function Metric({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="metric-card">
-      <strong>{value}</strong>
-      <span>{label}</span>
     </div>
   );
 }
