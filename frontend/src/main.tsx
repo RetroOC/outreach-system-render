@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
@@ -5,8 +6,13 @@ import './styles.css';
 type Feature = { title: string; body: string };
 type Metric = { value: string; label: string };
 type Workflow = { step: string; title: string; body: string };
-
 type Testimonial = { quote: string; author: string; role: string };
+
+type Account = { id: string; name: string };
+type Inbox = { id: string; emailAddress: string; provider: string; authStatus?: string };
+type Campaign = { id: string; name: string; status: string; objective?: string };
+
+type ApiResult<T> = { data?: T; error?: { code: string; message: string } };
 
 const features: Feature[] = [
   {
@@ -37,13 +43,13 @@ const workflow: Workflow[] = [
   },
   {
     step: '02',
-    title: 'Launch with control',
-    body: 'Run outreach through connected inboxes with visible pacing, health, and send-readiness states.',
+    title: 'Connect Gmail manually',
+    body: 'Create a Gmail inbox entry, mark it connected, and use manual test sends from the dashboard.',
   },
   {
     step: '03',
-    title: 'Handle replies centrally',
-    body: 'See conversations, route intent, stop future sends when needed, and keep context tied to each campaign.',
+    title: 'Keep campaign execution paused',
+    body: 'Create leads and campaigns now, but keep automation paused until you want live execution.',
   },
 ];
 
@@ -65,7 +71,225 @@ const testimonials: Testimonial[] = [
   },
 ];
 
+const defaultApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const defaultApiKey = import.meta.env.VITE_API_KEY || '';
+
 function App() {
+  const [apiBase, setApiBase] = React.useState(defaultApiBase);
+  const [apiKey, setApiKey] = React.useState(defaultApiKey);
+  const [status, setStatus] = React.useState('Ready');
+  const [health, setHealth] = React.useState('Not checked');
+
+  const [accounts, setAccounts] = React.useState<Account[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = React.useState('');
+  const [accountName, setAccountName] = React.useState('Neal Workspace');
+
+  const [inboxes, setInboxes] = React.useState<Inbox[]>([]);
+  const [selectedInboxId, setSelectedInboxId] = React.useState('');
+  const [inboxForm, setInboxForm] = React.useState({ emailAddress: '', displayName: '', dailyLimit: '50', hourlyLimit: '10' });
+  const [testSend, setTestSend] = React.useState({ to: '', subject: 'Test from Neal', text: 'This is a manual Gmail test send from the dashboard.' });
+
+  const [leadForm, setLeadForm] = React.useState({ email: '', firstName: '', company: '' });
+  const [campaignForm, setCampaignForm] = React.useState({ name: 'Manual outreach campaign', objective: 'Book qualified calls' });
+  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+
+  const baseHeaders = React.useMemo(() => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`;
+    return headers;
+  }, [apiKey]);
+
+  async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+    const response = await fetch(`${apiBase}${path}`, {
+      ...init,
+      headers: {
+        ...baseHeaders,
+        ...(init?.headers || {}),
+      },
+    });
+    return response.json();
+  }
+
+  async function checkHealth() {
+    setStatus('Checking backend...');
+    try {
+      const result = await request<{ ok: boolean }>('/health');
+      if (result.data?.ok) {
+        setHealth('Connected');
+        setStatus('Backend reachable.');
+      } else {
+        setHealth('Failed');
+        setStatus(result.error?.message || 'Health check failed');
+      }
+    } catch (error) {
+      setHealth('Failed');
+      setStatus(error instanceof Error ? error.message : 'Health check failed');
+    }
+  }
+
+  async function createAccount() {
+    setStatus('Creating account...');
+    try {
+      const result = await request<Account>('/accounts', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({ name: accountName, settings: {} }),
+      });
+      if (result.data) {
+        const next = [result.data, ...accounts];
+        setAccounts(next);
+        setSelectedAccountId(result.data.id);
+        setStatus(`Account created: ${result.data.name}`);
+      } else {
+        setStatus(result.error?.message || 'Failed to create account');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create account');
+    }
+  }
+
+  async function createInbox() {
+    if (!selectedAccountId) return setStatus('Create/select an account first.');
+    setStatus('Creating Gmail inbox...');
+    try {
+      const result = await request<Inbox>('/inboxes', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          accountId: selectedAccountId,
+          emailAddress: inboxForm.emailAddress,
+          provider: 'gmail',
+          displayName: inboxForm.displayName || undefined,
+          dailyLimit: Number(inboxForm.dailyLimit),
+          hourlyLimit: Number(inboxForm.hourlyLimit),
+          minDelaySeconds: 0,
+          sendingWindow: {},
+        }),
+      });
+      if (result.data) {
+        const next = [result.data, ...inboxes];
+        setInboxes(next);
+        setSelectedInboxId(result.data.id);
+        setStatus(`Inbox created: ${result.data.emailAddress}`);
+      } else {
+        setStatus(result.error?.message || 'Failed to create inbox');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create inbox');
+    }
+  }
+
+  async function connectInbox() {
+    if (!selectedInboxId) return setStatus('Select an inbox first.');
+    setStatus('Connecting inbox...');
+    try {
+      const result = await request<{ inboxId: string; authStatus: string }>(`/inboxes/${selectedInboxId}/connect`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+      });
+      if (result.data) {
+        setInboxes((prev) => prev.map((item) => item.id === selectedInboxId ? { ...item, authStatus: result.data?.authStatus } : item));
+        setStatus(`Inbox marked connected.`);
+      } else {
+        setStatus(result.error?.message || 'Failed to connect inbox');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to connect inbox');
+    }
+  }
+
+  async function sendTestEmail() {
+    if (!selectedInboxId) return setStatus('Select an inbox first.');
+    setStatus('Sending test email...');
+    try {
+      const result = await request<{ provider: string; providerMessageId: string; acceptedAt: string }>(`/inboxes/${selectedInboxId}/send-test`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify(testSend),
+      });
+      if (result.data) {
+        setStatus(`Test email sent via ${result.data.provider}. Message ID: ${result.data.providerMessageId}`);
+      } else {
+        setStatus(result.error?.message || 'Failed to send test email');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to send test email');
+    }
+  }
+
+  async function createLead() {
+    if (!selectedAccountId) return setStatus('Create/select an account first.');
+    setStatus('Creating lead...');
+    try {
+      const result = await request('/leads', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          accountId: selectedAccountId,
+          email: leadForm.email,
+          firstName: leadForm.firstName || undefined,
+          company: leadForm.company || undefined,
+          customFields: {},
+        }),
+      });
+      if (result.data) {
+        setLeadForm({ email: '', firstName: '', company: '' });
+        setStatus('Lead created successfully.');
+      } else {
+        setStatus(result.error?.message || 'Failed to create lead');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create lead');
+    }
+  }
+
+  async function createCampaign() {
+    if (!selectedAccountId) return setStatus('Create/select an account first.');
+    setStatus('Creating campaign...');
+    try {
+      const result = await request<Campaign>('/campaigns', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          accountId: selectedAccountId,
+          name: campaignForm.name,
+          objective: campaignForm.objective,
+          status: 'draft',
+          settings: { manualOnly: true },
+          steps: [
+            {
+              stepNumber: 1,
+              type: 'email',
+              delay: { kind: 'after_enrollment', amount: 0, unit: 'minutes' },
+              subjectTemplate: 'Quick question, {{firstName}}',
+              bodyTemplate: 'Hi {{firstName}}, wanted to reach out about {{company}}.',
+            },
+          ],
+        }),
+      });
+      if (result.data) {
+        setCampaigns((prev) => [result.data!, ...prev]);
+        setStatus(`Campaign created: ${result.data.name} (manual mode)`);
+      } else {
+        setStatus(result.error?.message || 'Failed to create campaign');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to create campaign');
+    }
+  }
+
+  async function loadCampaigns() {
+    if (!selectedAccountId) return setStatus('Select an account first.');
+    setStatus('Loading campaigns...');
+    try {
+      const result = await request<Campaign[]>(`/campaigns?accountId=${encodeURIComponent(selectedAccountId)}`);
+      setCampaigns(result.data || []);
+      setStatus('Campaigns loaded.');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to load campaigns');
+    }
+  }
+
   return (
     <div className="page-shell">
       <header className="topbar">
@@ -80,7 +304,7 @@ function App() {
         <nav className="nav">
           <a href="#features">Features</a>
           <a href="#workflow">Workflow</a>
-          <a href="#proof">Proof</a>
+          <a href="#dashboard">Dashboard</a>
           <a href="#cta">Get started</a>
         </nav>
 
@@ -99,7 +323,7 @@ function App() {
               Neal helps teams run campaigns, manage inboxes, protect deliverability, and handle replies without relying on a messy stack of disconnected tools.
             </p>
             <div className="hero-actions">
-              <a className="button button-primary button-large" href="/signup">Sign up</a>
+              <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
               <a className="button button-secondary button-large" href="/signin">Sign in</a>
             </div>
             <div className="hero-subnote">
@@ -121,22 +345,10 @@ function App() {
                   <strong>Tanzania UHNI acquisition</strong>
                   <p>4-step sequence · buyer-side advisory angle · review ready</p>
                 </div>
-                <div className="stat-card">
-                  <strong>112</strong>
-                  <span>enrolled leads</span>
-                </div>
-                <div className="stat-card">
-                  <strong>61%</strong>
-                  <span>capacity remaining</span>
-                </div>
-                <div className="stat-card">
-                  <strong>7</strong>
-                  <span>replies to route</span>
-                </div>
-                <div className="stat-card">
-                  <strong>Healthy</strong>
-                  <span>sender state</span>
-                </div>
+                <div className="stat-card"><strong>112</strong><span>enrolled leads</span></div>
+                <div className="stat-card"><strong>61%</strong><span>capacity remaining</span></div>
+                <div className="stat-card"><strong>7</strong><span>replies to route</span></div>
+                <div className="stat-card"><strong>Healthy</strong><span>sender state</span></div>
               </div>
             </div>
 
@@ -199,6 +411,159 @@ function App() {
           </div>
         </section>
 
+        <section className="dashboard-section" id="dashboard">
+          <div className="section-heading split-heading">
+            <div>
+              <span className="eyebrow">Manual dashboard</span>
+              <h2>Create Gmail inboxes, send manual test emails, add leads, and create campaigns.</h2>
+            </div>
+            <p>
+              Campaign automation remains paused. This dashboard is for manual setup and control only.
+            </p>
+          </div>
+
+          <div className="dashboard-grid">
+            <article className="dashboard-card full-span">
+              <div className="card-head">
+                <h3>Backend connection</h3>
+                <span className={health === 'Connected' ? 'badge success' : health === 'Failed' ? 'badge danger' : 'badge'}>{health}</span>
+              </div>
+              <div className="form-grid two-col-grid">
+                <label>
+                  API base URL
+                  <input value={apiBase} onChange={(e) => setApiBase(e.target.value)} placeholder="http://localhost:3000" />
+                </label>
+                <label>
+                  API key
+                  <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Bearer token if enabled" />
+                </label>
+              </div>
+              <div className="action-row"><button className="button button-primary" onClick={checkHealth}>Check backend</button></div>
+            </article>
+
+            <article className="dashboard-card">
+              <div className="card-head"><h3>Create account</h3></div>
+              <label>
+                Account name
+                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+              </label>
+              <div className="action-row"><button className="button button-primary" onClick={createAccount}>Create account</button></div>
+              <label>
+                Active account
+                <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
+                  <option value="">Choose account</option>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </label>
+            </article>
+
+            <article className="dashboard-card">
+              <div className="card-head"><h3>Create Gmail inbox</h3></div>
+              <label>
+                Gmail address
+                <input value={inboxForm.emailAddress} onChange={(e) => setInboxForm({ ...inboxForm, emailAddress: e.target.value })} placeholder="yourgmail@gmail.com" />
+              </label>
+              <label>
+                Display name
+                <input value={inboxForm.displayName} onChange={(e) => setInboxForm({ ...inboxForm, displayName: e.target.value })} placeholder="Gershon" />
+              </label>
+              <div className="form-grid two-col-grid">
+                <label>
+                  Daily limit
+                  <input value={inboxForm.dailyLimit} onChange={(e) => setInboxForm({ ...inboxForm, dailyLimit: e.target.value })} />
+                </label>
+                <label>
+                  Hourly limit
+                  <input value={inboxForm.hourlyLimit} onChange={(e) => setInboxForm({ ...inboxForm, hourlyLimit: e.target.value })} />
+                </label>
+              </div>
+              <div className="action-row"><button className="button button-primary" onClick={createInbox}>Create Gmail inbox</button></div>
+              <label>
+                Select inbox
+                <select value={selectedInboxId} onChange={(e) => setSelectedInboxId(e.target.value)}>
+                  <option value="">Choose inbox</option>
+                  {inboxes.map((inbox) => <option key={inbox.id} value={inbox.id}>{inbox.emailAddress} {inbox.authStatus ? `(${inbox.authStatus})` : ''}</option>)}
+                </select>
+              </label>
+              <div className="action-row"><button className="button button-secondary" onClick={connectInbox}>Mark inbox connected</button></div>
+            </article>
+
+            <article className="dashboard-card">
+              <div className="card-head"><h3>Manual Gmail test send</h3></div>
+              <label>
+                To
+                <input value={testSend.to} onChange={(e) => setTestSend({ ...testSend, to: e.target.value })} placeholder="recipient@example.com" />
+              </label>
+              <label>
+                Subject
+                <input value={testSend.subject} onChange={(e) => setTestSend({ ...testSend, subject: e.target.value })} />
+              </label>
+              <label>
+                Message
+                <textarea value={testSend.text} onChange={(e) => setTestSend({ ...testSend, text: e.target.value })} rows={5} />
+              </label>
+              <div className="action-row"><button className="button button-primary" onClick={sendTestEmail}>Send test email</button></div>
+            </article>
+
+            <article className="dashboard-card">
+              <div className="card-head"><h3>Add lead</h3></div>
+              <label>
+                Lead email
+                <input value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} />
+              </label>
+              <label>
+                First name
+                <input value={leadForm.firstName} onChange={(e) => setLeadForm({ ...leadForm, firstName: e.target.value })} />
+              </label>
+              <label>
+                Company
+                <input value={leadForm.company} onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })} />
+              </label>
+              <div className="action-row"><button className="button button-primary" onClick={createLead}>Create lead</button></div>
+            </article>
+
+            <article className="dashboard-card">
+              <div className="card-head"><h3>Create campaign</h3></div>
+              <label>
+                Campaign name
+                <input value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
+              </label>
+              <label>
+                Objective
+                <input value={campaignForm.objective} onChange={(e) => setCampaignForm({ ...campaignForm, objective: e.target.value })} />
+              </label>
+              <div className="action-row">
+                <button className="button button-primary" onClick={createCampaign}>Create campaign</button>
+                <button className="button button-secondary" onClick={loadCampaigns}>Load campaigns</button>
+              </div>
+            </article>
+
+            <article className="dashboard-card full-span">
+              <div className="card-head"><h3>Campaign list</h3></div>
+              {campaigns.length === 0 ? (
+                <div className="empty-box">No campaigns loaded yet.</div>
+              ) : (
+                <div className="list-box">
+                  {campaigns.map((campaign) => (
+                    <div key={campaign.id} className="list-item-row">
+                      <div>
+                        <strong>{campaign.name}</strong>
+                        <p>{campaign.objective || 'No objective set'}</p>
+                      </div>
+                      <span className="badge">{campaign.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+
+            <article className="dashboard-card full-span">
+              <div className="card-head"><h3>Status log</h3></div>
+              <div className="status-log">{status}</div>
+            </article>
+          </div>
+        </section>
+
         <section className="proof-section" id="proof">
           <div className="section-heading">
             <span className="eyebrow">Proof</span>
@@ -222,11 +587,11 @@ function App() {
             <span className="eyebrow">Get started</span>
             <h2>Start using a cleaner outbound system.</h2>
             <p>
-              Set up campaigns, connect inboxes, and run reply-aware outbound from a product that is built to stay legible as you grow.
+              Set up campaigns, connect Gmail manually, and keep campaign automation paused until you are ready.
             </p>
           </div>
           <div className="hero-actions">
-            <a className="button button-primary button-large" href="/signup">Sign up</a>
+            <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
             <a className="button button-secondary button-large" href="/signin">Sign in</a>
           </div>
         </section>
