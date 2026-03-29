@@ -11,6 +11,7 @@ type Testimonial = { quote: string; author: string; role: string };
 type Account = { id: string; name: string };
 type Inbox = { id: string; emailAddress: string; provider: string; authStatus?: string };
 type Campaign = { id: string; name: string; status: string; objective?: string };
+type Lead = { id: string; email: string; firstName?: string; company?: string };
 
 type ApiResult<T> = { data?: T; error?: { code: string; message: string } };
 
@@ -92,6 +93,7 @@ function App() {
   const [leadForm, setLeadForm] = React.useState({ email: '', firstName: '', company: '' });
   const [campaignForm, setCampaignForm] = React.useState({ name: 'Manual outreach campaign', objective: 'Book qualified calls' });
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+  const [leads, setLeads] = React.useState<Lead[]>([]);
 
   const baseHeaders = React.useMemo(() => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -233,8 +235,10 @@ function App() {
         }),
       });
       if (result.data) {
+        const lead = result.data as Lead;
+        setLeads((prev) => [lead, ...prev]);
         setLeadForm({ email: '', firstName: '', company: '' });
-        setStatus('Lead created successfully.');
+        setStatus(`Lead created: ${lead.email}`);
       } else {
         setStatus(result.error?.message || 'Failed to create lead');
       }
@@ -290,6 +294,10 @@ function App() {
     }
   }
 
+  React.useEffect(() => {
+    checkHealth();
+  }, []);
+
   return (
     <div className="page-shell">
       <header className="topbar">
@@ -309,8 +317,8 @@ function App() {
         </nav>
 
         <div className="topbar-actions">
-          <a className="button button-ghost" href="/signin">Sign in</a>
-          <a className="button button-primary" href="/signup">Sign up</a>
+          <a className="button button-ghost" href="#dashboard">Open dashboard</a>
+          <a className="button button-primary" href="#dashboard">Start testing</a>
         </div>
       </header>
 
@@ -324,7 +332,7 @@ function App() {
             </p>
             <div className="hero-actions">
               <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
-              <a className="button button-secondary button-large" href="/signin">Sign in</a>
+              <a className="button button-secondary button-large" href="#dashboard">Start testing</a>
             </div>
             <div className="hero-subnote">
               Built for founders, operators, and teams that want better control over outbound execution.
@@ -558,6 +566,25 @@ function App() {
             </article>
 
             <article className="dashboard-card full-span">
+              <div className="card-head"><h3>Recently created leads</h3></div>
+              {leads.length === 0 ? (
+                <div className="empty-box">No leads created in this session yet.</div>
+              ) : (
+                <div className="list-box">
+                  {leads.map((lead) => (
+                    <div key={lead.id} className="list-item-row">
+                      <div>
+                        <strong>{lead.email}</strong>
+                        <p>{lead.firstName || 'No first name'} · {lead.company || 'No company'}</p>
+                      </div>
+                      <span className="badge">lead</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+
+            <article className="dashboard-card full-span">
               <div className="card-head"><h3>Status log</h3></div>
               <div className="status-log">{status}</div>
             </article>
@@ -592,7 +619,7 @@ function App() {
           </div>
           <div className="hero-actions">
             <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
-            <a className="button button-secondary button-large" href="/signin">Sign in</a>
+            <a className="button button-secondary button-large" href="#dashboard">Start testing</a>
           </div>
         </section>
       </main>
