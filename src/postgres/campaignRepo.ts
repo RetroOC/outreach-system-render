@@ -10,8 +10,8 @@ export class PostgresCampaignRepo {
 
     await this.db.query({
       text: `
-        insert into campaigns (id, account_id, name, status, objective, settings, schedule_version)
-        values ($1,$2,$3,$4,$5,$6::jsonb,$7)
+        insert into campaigns (id, account_id, name, status, objective, settings, schedule, schedule_version)
+        values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8)
       `,
       values: [
         campaign.id,
@@ -20,6 +20,7 @@ export class PostgresCampaignRepo {
         campaign.status,
         campaign.objective ?? null,
         JSON.stringify(campaign.settings),
+        JSON.stringify(campaign.schedule),
         campaign.scheduleVersion,
       ],
     });

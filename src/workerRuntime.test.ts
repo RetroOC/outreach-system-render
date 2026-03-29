@@ -28,12 +28,13 @@ test("worker runtime schedules and processes outbound message", async () => {
   });
   inbox.authStatus = "connected";
   await storage.updateInbox(inbox);
-  const lead = await storage.createLead({ accountId: account.id, email: "lead@example.com", firstName: "Jane", company: "Acme", customFields: {} });
+  const lead = await storage.createLead({ accountId: account.id, email: "lead@example.com", firstName: "Jane", company: "Acme", customFields: {}, tags: [] });
   const campaign = await storage.createCampaign({
     accountId: account.id,
     name: "Test Campaign",
     status: "active",
     settings: {},
+    schedule: { timezone: "UTC", allowedDays: [1, 2, 3, 4, 5], startHour: 9, endHour: 17 },
     steps: [{ stepNumber: 1, type: "email", delay: { kind: "after_enrollment", amount: 0, unit: "minutes" }, subjectTemplate: "Hi {{first_name}}", bodyTemplate: "Hello {{company}}" }],
   });
   const enrollment = await storage.createEnrollment({

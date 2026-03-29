@@ -35,6 +35,7 @@ export type Lead = {
   timezone?: string;
   source?: string;
   customFields: Record<string, unknown>;
+  tags: string[];
   status: "active" | "suppressed";
 };
 
@@ -50,15 +51,51 @@ export type CampaignStep = {
   bodyTemplate: string;
 };
 
+export type CampaignSchedule = {
+  timezone: string;
+  allowedDays: number[];
+  startHour: number;
+  endHour: number;
+};
+
+export type CampaignSettings = {
+  trackOpens?: boolean;
+  trackClicks?: boolean;
+  stopOnReply?: boolean;
+  stopOnAutoReply?: boolean;
+  dailySendLimit?: number;
+  customFields?: string[];
+  tags?: string[];
+  [key: string]: unknown;
+};
+
 export type Campaign = {
   id: EntityId;
   accountId: EntityId;
   name: string;
   status: "draft" | "active" | "paused" | "archived";
   objective?: string;
-  settings: Record<string, unknown>;
+  settings: CampaignSettings;
+  schedule: CampaignSchedule;
   steps: CampaignStep[];
   scheduleVersion: number;
+};
+
+export type LeadImport = {
+  id: EntityId;
+  accountId: EntityId;
+  fileName: string;
+  status: "uploaded" | "mapped" | "imported";
+  headers: string[];
+  sampleRows: Record<string, string>[];
+  totalRows: number;
+  rows: Record<string, string>[];
+  mapping: Record<string, string>;
+  customFieldKeys: string[];
+  tagNames: string[];
+  createdLeadIds: string[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Enrollment = {

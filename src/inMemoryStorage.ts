@@ -1,5 +1,5 @@
 import type { Storage } from "./storage.js";
-import type { Account, Campaign, Enrollment, Inbox, Lead, Message, Thread } from "./domain.js";
+import type { Account, Campaign, Enrollment, Inbox, Lead, LeadImport, Message, Thread } from "./domain.js";
 import { InMemoryRepo } from "./repo.js";
 
 const makeId = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -16,6 +16,16 @@ export class InMemoryStorage implements Storage {
 
   async createLead(input: Omit<Lead, "id" | "status">) { return this.repo.createLead(input); }
   async getLeadById(id: string) { return this.repo.leads.get(id) ?? null; }
+  async listLeadsByAccountId(accountId: string) { return Array.from(this.repo.leads.values()).filter((item) => item.accountId === accountId); }
+
+  async createLeadImport(input: Omit<LeadImport, "id" | "createdAt" | "updatedAt">) { return this.repo.createLeadImport(input); }
+  async getLeadImportById(id: string) { return this.repo.leadImports.get(id) ?? null; }
+  async updateLeadImport(leadImport: LeadImport) {
+    const next = { ...leadImport, updatedAt: new Date().toISOString() };
+    this.repo.leadImports.set(next.id, next);
+    return next;
+  }
+  async listLeadImportsByAccountId(accountId: string) { return Array.from(this.repo.leadImports.values()).filter((item) => item.accountId === accountId); }
 
   async createCampaign(input: Omit<Campaign, "id" | "scheduleVersion">) { return this.repo.createCampaign(input); }
   async getCampaignById(id: string) { return this.repo.campaigns.get(id) ?? null; }

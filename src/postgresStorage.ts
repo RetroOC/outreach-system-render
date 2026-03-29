@@ -1,5 +1,5 @@
 import type { Storage } from "./storage.js";
-import type { Account, Campaign, Enrollment, Inbox, Lead, Message, Thread } from "./domain.js";
+import type { Account, Campaign, Enrollment, Inbox, Lead, LeadImport, Message, Thread } from "./domain.js";
 import { PostgresAccountRepo } from "./postgres/accountRepo.js";
 import { PostgresCampaignRepo } from "./postgres/campaignRepo.js";
 import { PostgresEnrollmentRepo } from "./postgres/enrollmentRepo.js";
@@ -8,6 +8,7 @@ import { PostgresLeadRepo } from "./postgres/leadRepo.js";
 import { PostgresMessageRepo } from "./postgres/messageRepo.js";
 import { PostgresThreadRepo } from "./postgres/threadRepo.js";
 import { PostgresSuppressionRepo } from "./postgres/suppressionRepo.js";
+import { makeId } from "./postgres/helpers.js";
 import type { SqlClient } from "./postgres/types.js";
 
 export class PostgresStorage implements Storage {
@@ -40,6 +41,43 @@ export class PostgresStorage implements Storage {
 
   createLead(input: Omit<Lead, "id" | "status">) { return this.leads.create(input); }
   getLeadById(id: string) { return this.dbGetLead(id); }
+  listLeadsByAccountId(accountId: string) { return this.dbListLeadsByAccountId(accountId); }
+
+  async createLeadImport(input: Omit<LeadImport, "id" | "createdAt" | "updatedAt">): Promise<LeadImport> {
+    const leadImport: LeadImport = {
+      id: makeId("imp"),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...input,
+    };
+    await this.db.query({
+      text: `
+        insert into lead_imports (
+          id, account_id, file_name, status, headers, sample_rows, total_rows, rows, mapping, custom_field_keys, tag_names, created_lead_ids, created_at, updated_at
+        ) values ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::jsonb,$13,$14)
+      `,
+      values: [
+        leadImport.id,
+        leadImport.accountId,
+        leadImport.fileName,
+        leadImport.status,
+        JSON.stringify(leadImport.headers),
+        JSON.stringify(leadImport.sampleRows),
+        leadImport.totalRows,
+        JSON.stringify(leadImport.rows),
+        JSON.stringify(leadImport.mapping),
+        JSON.stringify(leadImport.customFieldKeys),
+        JSON.stringify(leadImport.tagNames),
+        JSON.stringify(leadImport.createdLeadIds),
+        leadImport.createdAt,
+        leadImport.updatedAt,
+      ],
+    });
+    return leadImport;
+  }
+  getLeadImportById(id: string) { return this.dbGetLeadImport(id); }
+  updateLeadImport(leadImport: LeadImport) { return this.dbUpdateLeadImport(leadImport); }
+  listLeadImportsByAccountId(accountId: string) { return this.dbListLeadImportsByAccountId(accountId); }
 
   createCampaign(input: Omit<Campaign, "id" | "scheduleVersion">) { return this.campaigns.create(input); }
   getCampaignById(id: string) { return this.dbGetCampaign(id); }
@@ -92,10 +130,7 @@ export class PostgresStorage implements Storage {
     return inbox;
   }
 
-  private async dbGetLead(id: string): Promise<Lead | null> {
-    const result = await this.db.query<any>({ text: `select * from leads where id = $1`, values: [id] });
-    const row = result.rows[0];
-    if (!row) return null;
+  private mapLead(row: any): Lead {
     return {
       id: row.id,
       accountId: row.account_id,
@@ -107,8 +142,75 @@ export class PostgresStorage implements Storage {
       timezone: row.timezone ?? undefined,
       source: row.source ?? undefined,
       customFields: row.custom_fields,
+      tags: row.tags ?? [],
       status: row.status,
     };
+  }
+
+  private async dbGetLead(id: string): Promise<Lead | null> {
+    const result = await this.db.query<any>({ text: `select * from leads where id = $1`, values: [id] });
+    const row = result.rows[0];
+    return row ? this.mapLead(row) : null;
+  }
+
+  private async dbListLeadsByAccountId(accountId: string): Promise<Lead[]> {
+    const result = await this.db.query<any>({ text: `select * from leads where account_id = $1 order by updated_at desc, created_at desc`, values: [accountId] });
+    return result.rows.map((row) => this.mapLead(row));
+  }
+
+  private mapLeadImport(row: any): LeadImport {
+    return {
+      id: row.id,
+      accountId: row.account_id,
+      fileName: row.file_name,
+      status: row.status,
+      headers: row.headers ?? [],
+      sampleRows: row.sample_rows ?? [],
+      totalRows: row.total_rows,
+      rows: row.rows ?? [],
+      mapping: row.mapping ?? {},
+      customFieldKeys: row.custom_field_keys ?? [],
+      tagNames: row.tag_names ?? [],
+      createdLeadIds: row.created_lead_ids ?? [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private async dbGetLeadImport(id: string): Promise<LeadImport | null> {
+    const result = await this.db.query<any>({ text: `select * from lead_imports where id = $1`, values: [id] });
+    const row = result.rows[0];
+    return row ? this.mapLeadImport(row) : null;
+  }
+
+  private async dbUpdateLeadImport(leadImport: LeadImport): Promise<LeadImport> {
+    const updatedAt = new Date().toISOString();
+    await this.db.query({
+      text: `
+        update lead_imports
+        set status=$2, headers=$3::jsonb, sample_rows=$4::jsonb, total_rows=$5, rows=$6::jsonb, mapping=$7::jsonb, custom_field_keys=$8::jsonb, tag_names=$9::jsonb, created_lead_ids=$10::jsonb, updated_at=$11
+        where id=$1
+      `,
+      values: [
+        leadImport.id,
+        leadImport.status,
+        JSON.stringify(leadImport.headers),
+        JSON.stringify(leadImport.sampleRows),
+        leadImport.totalRows,
+        JSON.stringify(leadImport.rows),
+        JSON.stringify(leadImport.mapping),
+        JSON.stringify(leadImport.customFieldKeys),
+        JSON.stringify(leadImport.tagNames),
+        JSON.stringify(leadImport.createdLeadIds),
+        updatedAt,
+      ],
+    });
+    return { ...leadImport, updatedAt };
+  }
+
+  private async dbListLeadImportsByAccountId(accountId: string): Promise<LeadImport[]> {
+    const result = await this.db.query<any>({ text: `select * from lead_imports where account_id = $1 order by created_at desc`, values: [accountId] });
+    return result.rows.map((row) => this.mapLeadImport(row));
   }
 
   private async dbGetCampaign(id: string): Promise<Campaign | null> {
@@ -123,6 +225,7 @@ export class PostgresStorage implements Storage {
       status: row.status,
       objective: row.objective ?? undefined,
       settings: row.settings,
+      schedule: row.schedule,
       scheduleVersion: row.schedule_version,
       steps: steps.rows.map((step) => ({
         stepNumber: step.step_number,
@@ -136,8 +239,8 @@ export class PostgresStorage implements Storage {
 
   private async dbUpdateCampaign(campaign: Campaign): Promise<Campaign> {
     await this.db.query({
-      text: `update campaigns set name=$2, status=$3, objective=$4, settings=$5::jsonb, schedule_version=$6, updated_at=now() where id=$1`,
-      values: [campaign.id, campaign.name, campaign.status, campaign.objective ?? null, JSON.stringify(campaign.settings), campaign.scheduleVersion],
+      text: `update campaigns set name=$2, status=$3, objective=$4, settings=$5::jsonb, schedule=$6::jsonb, schedule_version=$7, updated_at=now() where id=$1`,
+      values: [campaign.id, campaign.name, campaign.status, campaign.objective ?? null, JSON.stringify(campaign.settings), JSON.stringify(campaign.schedule), campaign.scheduleVersion],
     });
     return campaign;
   }

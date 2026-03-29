@@ -11,8 +11,8 @@ export class PostgresLeadRepo {
     await this.db.query({
       text: `
         insert into leads (
-          id, account_id, email, first_name, last_name, company, title, timezone, source, custom_fields, status
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)
+          id, account_id, email, first_name, last_name, company, title, timezone, source, custom_fields, tags, status
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12)
       `,
       values: [
         lead.id,
@@ -25,6 +25,7 @@ export class PostgresLeadRepo {
         lead.timezone ?? null,
         lead.source ?? null,
         JSON.stringify(lead.customFields),
+        JSON.stringify(lead.tags),
         lead.status,
       ],
     });

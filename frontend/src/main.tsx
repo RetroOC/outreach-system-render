@@ -1,634 +1,381 @@
 /// <reference types="vite/client" />
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './styles.css';
-
-type Feature = { title: string; body: string };
-type Metric = { value: string; label: string };
-type Workflow = { step: string; title: string; body: string };
-type Testimonial = { quote: string; author: string; role: string };
-
-type Account = { id: string; name: string };
-type Inbox = { id: string; emailAddress: string; provider: string; authStatus?: string };
-type Campaign = { id: string; name: string; status: string; objective?: string };
-type Lead = { id: string; email: string; firstName?: string; company?: string };
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./styles.css";
 
 type ApiResult<T> = { data?: T; error?: { code: string; message: string } };
+type Account = { id: string; name: string };
+type Inbox = { id: string; emailAddress: string; authStatus?: string };
+type Lead = { id: string; email: string; firstName?: string; company?: string; tags: string[]; customFields: Record<string, unknown> };
+type LeadImport = { id: string; fileName: string; status: string; headers: string[]; sampleRows: Record<string, string>[]; totalRows: number; mapping: Record<string, string>; customFieldKeys: string[]; tagNames: string[]; createdLeadIds: string[] };
+type CampaignStep = { stepNumber: number; subjectTemplate: string; bodyTemplate: string; delay: { amount: number; unit: string } };
+type Campaign = { id: string; name: string; status: string; objective?: string; settings: Record<string, unknown>; schedule: { timezone: string; allowedDays: number[]; startHour: number; endHour: number }; steps: CampaignStep[] };
 
-const features: Feature[] = [
-  {
-    title: 'All outreach operations in one place',
-    body: 'Run campaigns, manage inboxes, monitor reply flow, and keep your outbound system controlled from one clean operating layer.',
-  },
-  {
-    title: 'Built for deliverability-aware scale',
-    body: 'Protect sender reputation with pacing logic, inbox controls, suppression handling, and stop-on-reply discipline.',
-  },
-  {
-    title: 'From lead to reply without workflow sprawl',
-    body: 'Move from targeting to sequence execution to reply handling without stitching together five different tools.',
-  },
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_KEY = import.meta.env.VITE_API_KEY || "";
+const dayOptions = [
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+  { value: 0, label: "Sun" },
 ];
-
-const metrics: Metric[] = [
-  { value: '1', label: 'platform for campaigns, inboxes, and replies' },
-  { value: '3x', label: 'clearer operator workflow than disconnected tools' },
-  { value: '0', label: 'need for scattered sequence + inbox + ops stacks' },
-];
-
-const workflow: Workflow[] = [
-  {
-    step: '01',
-    title: 'Set up the campaign',
-    body: 'Define the offer, audience, and sequence logic in a structured campaign workspace.',
-  },
-  {
-    step: '02',
-    title: 'Connect Gmail manually',
-    body: 'Create a Gmail inbox entry, mark it connected, and use manual test sends from the dashboard.',
-  },
-  {
-    step: '03',
-    title: 'Keep campaign execution paused',
-    body: 'Create leads and campaigns now, but keep automation paused until you want live execution.',
-  },
-];
-
-const testimonials: Testimonial[] = [
-  {
-    quote: 'Finally feels like an outbound product built around operations, not just message sending.',
-    author: 'Revenue Lead',
-    role: 'B2B SaaS',
-  },
-  {
-    quote: 'The big win is clarity. Campaign state, inbox state, and reply state belong together.',
-    author: 'Founder',
-    role: 'Outbound-first startup',
-  },
-  {
-    quote: 'This is the kind of system teams actually want once volume starts creating complexity.',
-    author: 'Agency Operator',
-    role: 'Lead generation',
-  },
-];
-
-const defaultApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-const defaultApiKey = import.meta.env.VITE_API_KEY || '';
+const fieldTargets = ["ignore", "email", "firstName", "lastName", "company", "title", "timezone", "source"];
 
 function App() {
-  const [apiBase, setApiBase] = React.useState(defaultApiBase);
-  const [apiKey, setApiKey] = React.useState(defaultApiKey);
-  const [status, setStatus] = React.useState('Ready');
-  const [health, setHealth] = React.useState('Not checked');
+  const [apiBase, setApiBase] = React.useState(API_BASE);
+  const [apiKey, setApiKey] = React.useState(API_KEY);
+  const [status, setStatus] = React.useState("Ready");
 
+  const [accountName, setAccountName] = React.useState("Outreach v3 workspace");
   const [accounts, setAccounts] = React.useState<Account[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = React.useState('');
-  const [accountName, setAccountName] = React.useState('Neal Workspace');
+  const [selectedAccountId, setSelectedAccountId] = React.useState("");
 
   const [inboxes, setInboxes] = React.useState<Inbox[]>([]);
-  const [selectedInboxId, setSelectedInboxId] = React.useState('');
-  const [inboxForm, setInboxForm] = React.useState({ emailAddress: '', displayName: '', dailyLimit: '50', hourlyLimit: '10' });
-  const [testSend, setTestSend] = React.useState({ to: '', subject: 'Test from Neal', text: 'This is a manual Gmail test send from the dashboard.' });
+  const [selectedInboxId, setSelectedInboxId] = React.useState("");
+  const [inboxEmail, setInboxEmail] = React.useState("operator@example.com");
 
-  const [leadForm, setLeadForm] = React.useState({ email: '', firstName: '', company: '' });
-  const [campaignForm, setCampaignForm] = React.useState({ name: 'Manual outreach campaign', objective: 'Book qualified calls' });
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+  const [csvText, setCsvText] = React.useState("email,first_name,company,industry,region,is_founder\nalice@example.com,Alice,Acme,Fintech,UK,yes\nbob@example.com,Bob,Beacon,Health,DE,no");
+  const [fileName, setFileName] = React.useState("leads.csv");
+  const [leadImports, setLeadImports] = React.useState<LeadImport[]>([]);
+  const [activeImportId, setActiveImportId] = React.useState("");
+  const [mapping, setMapping] = React.useState<Record<string, string>>({});
+
   const [leads, setLeads] = React.useState<Lead[]>([]);
+  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
+  const [campaignName, setCampaignName] = React.useState("Founder campaign");
+  const [campaignObjective, setCampaignObjective] = React.useState("Book intro calls");
+  const [scheduleTimezone, setScheduleTimezone] = React.useState("Europe/Berlin");
+  const [allowedDays, setAllowedDays] = React.useState<number[]>([1, 2, 3, 4, 5]);
+  const [startHour, setStartHour] = React.useState("9");
+  const [endHour, setEndHour] = React.useState("17");
+  const [trackOpens, setTrackOpens] = React.useState(false);
+  const [stopOnReply, setStopOnReply] = React.useState(true);
+  const [subjectTemplate, setSubjectTemplate] = React.useState("{Quick|Fast} question, {{firstName}}");
+  const [bodyTemplate, setBodyTemplate] = React.useState("Hi {{firstName}},\n\nSaw {{company}} and wanted to ask a {quick|brief} question about your {{industry}} motion.\n\nOpen to a short chat?");
+  const [spintaxPreview, setSpintaxPreview] = React.useState("");
 
-  const baseHeaders = React.useMemo(() => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (apiKey.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`;
-    return headers;
+  const headers = React.useMemo(() => {
+    const base: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey.trim()) base.Authorization = `Bearer ${apiKey.trim()}`;
+    return base;
   }, [apiKey]);
 
+  const activeImport = React.useMemo(() => leadImports.find((item) => item.id === activeImportId) || null, [leadImports, activeImportId]);
+
   async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
-    const response = await fetch(`${apiBase}${path}`, {
-      ...init,
-      headers: {
-        ...baseHeaders,
-        ...(init?.headers || {}),
-      },
-    });
+    const response = await fetch(`${apiBase}${path}`, { ...init, headers: { ...headers, ...(init?.headers || {}) } });
     return response.json();
   }
 
-  async function checkHealth() {
-    setStatus('Checking backend...');
-    try {
-      const result = await request<{ ok: boolean }>('/health');
-      if (result.data?.ok) {
-        setHealth('Connected');
-        setStatus('Backend reachable.');
-      } else {
-        setHealth('Failed');
-        setStatus(result.error?.message || 'Health check failed');
-      }
-    } catch (error) {
-      setHealth('Failed');
-      setStatus(error instanceof Error ? error.message : 'Health check failed');
-    }
-  }
-
   async function createAccount() {
-    setStatus('Creating account...');
-    try {
-      const result = await request<Account>('/accounts', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ name: accountName, settings: {} }),
-      });
-      if (result.data) {
-        const next = [result.data, ...accounts];
-        setAccounts(next);
-        setSelectedAccountId(result.data.id);
-        setStatus(`Account created: ${result.data.name}`);
-      } else {
-        setStatus(result.error?.message || 'Failed to create account');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create account');
-    }
+    setStatus("Creating account...");
+    const result = await request<Account>("/accounts", { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ name: accountName, settings: {} }) });
+    if (result.data) {
+      setAccounts((prev) => [result.data!, ...prev]);
+      setSelectedAccountId(result.data.id);
+      setStatus(`Account ready: ${result.data.name}`);
+    } else setStatus(result.error?.message || "Failed to create account");
   }
 
   async function createInbox() {
-    if (!selectedAccountId) return setStatus('Create/select an account first.');
-    setStatus('Creating Gmail inbox...');
-    try {
-      const result = await request<Inbox>('/inboxes', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({
-          accountId: selectedAccountId,
-          emailAddress: inboxForm.emailAddress,
-          provider: 'gmail',
-          displayName: inboxForm.displayName || undefined,
-          dailyLimit: Number(inboxForm.dailyLimit),
-          hourlyLimit: Number(inboxForm.hourlyLimit),
-          minDelaySeconds: 0,
-          sendingWindow: {},
-        }),
-      });
-      if (result.data) {
-        const next = [result.data, ...inboxes];
-        setInboxes(next);
-        setSelectedInboxId(result.data.id);
-        setStatus(`Inbox created: ${result.data.emailAddress}`);
-      } else {
-        setStatus(result.error?.message || 'Failed to create inbox');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create inbox');
-    }
+    if (!selectedAccountId) return setStatus("Create an account first.");
+    const result = await request<Inbox>("/inboxes", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ accountId: selectedAccountId, emailAddress: inboxEmail, provider: "gmail", dailyLimit: 40, hourlyLimit: 8, minDelaySeconds: 90, sendingWindow: {} }),
+    });
+    if (result.data) {
+      setInboxes((prev) => [result.data!, ...prev]);
+      setSelectedInboxId(result.data.id);
+      setStatus(`Inbox created: ${result.data.emailAddress}`);
+    } else setStatus(result.error?.message || "Failed to create inbox");
   }
 
-  async function connectInbox() {
-    if (!selectedInboxId) return setStatus('Select an inbox first.');
-    setStatus('Connecting inbox...');
-    try {
-      const result = await request<{ inboxId: string; authStatus: string }>(`/inboxes/${selectedInboxId}/connect`, {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-      });
-      if (result.data) {
-        setInboxes((prev) => prev.map((item) => item.id === selectedInboxId ? { ...item, authStatus: result.data?.authStatus } : item));
-        setStatus(`Inbox marked connected.`);
-      } else {
-        setStatus(result.error?.message || 'Failed to connect inbox');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to connect inbox');
-    }
+  async function uploadCsv() {
+    if (!selectedAccountId) return setStatus("Create an account first.");
+    const result = await request<LeadImport>("/lead-imports/upload", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ accountId: selectedAccountId, fileName, csv: csvText }),
+    });
+    if (result.data) {
+      setLeadImports((prev) => [result.data!, ...prev]);
+      setActiveImportId(result.data.id);
+      const inferred = Object.fromEntries(result.data.headers.map((header) => {
+        const normalized = header.toLowerCase();
+        if (normalized.includes("email")) return [header, "email"];
+        if (normalized.includes("first")) return [header, "firstName"];
+        if (normalized.includes("last")) return [header, "lastName"];
+        if (normalized.includes("company")) return [header, "company"];
+        if (normalized.includes("title")) return [header, "title"];
+        if (normalized.includes("time")) return [header, "timezone"];
+        if (normalized.includes("source")) return [header, "source"];
+        return [header, `custom:${header}`];
+      }));
+      setMapping(inferred);
+      setStatus(`Uploaded ${result.data.totalRows} rows from ${result.data.fileName}`);
+    } else setStatus(result.error?.message || "Upload failed");
   }
 
-  async function sendTestEmail() {
-    if (!selectedInboxId) return setStatus('Select an inbox first.');
-    setStatus('Sending test email...');
-    try {
-      const result = await request<{ provider: string; providerMessageId: string; acceptedAt: string }>(`/inboxes/${selectedInboxId}/send-test`, {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify(testSend),
-      });
-      if (result.data) {
-        setStatus(`Test email sent via ${result.data.provider}. Message ID: ${result.data.providerMessageId}`);
-      } else {
-        setStatus(result.error?.message || 'Failed to send test email');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to send test email');
-    }
+  async function saveMapping() {
+    if (!activeImportId) return setStatus("Upload CSV first.");
+    const result = await request<LeadImport>(`/lead-imports/${activeImportId}/map`, {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ mapping }),
+    });
+    if (result.data) {
+      setLeadImports((prev) => prev.map((item) => item.id === result.data!.id ? result.data! : item));
+      setStatus(`Mapping saved. ${result.data.customFieldKeys.length} custom fields and ${result.data.tagNames.length} tags discovered.`);
+    } else setStatus(result.error?.message || "Mapping failed");
   }
 
-  async function createLead() {
-    if (!selectedAccountId) return setStatus('Create/select an account first.');
-    setStatus('Creating lead...');
-    try {
-      const result = await request('/leads', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({
-          accountId: selectedAccountId,
-          email: leadForm.email,
-          firstName: leadForm.firstName || undefined,
-          company: leadForm.company || undefined,
-          customFields: {},
-        }),
-      });
-      if (result.data) {
-        const lead = result.data as Lead;
-        setLeads((prev) => [lead, ...prev]);
-        setLeadForm({ email: '', firstName: '', company: '' });
-        setStatus(`Lead created: ${lead.email}`);
-      } else {
-        setStatus(result.error?.message || 'Failed to create lead');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create lead');
-    }
+  async function commitImport() {
+    if (!activeImportId) return setStatus("No active import.");
+    const result = await request<{ created: number }>(`/lead-imports/${activeImportId}/commit`, {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
+    if (result.data) {
+      setStatus(`Imported ${result.data.created} leads.`);
+      await loadLeads();
+      await loadImports();
+    } else setStatus(result.error?.message || "Commit failed");
+  }
+
+  async function loadLeads() {
+    if (!selectedAccountId) return;
+    const result = await request<Lead[]>(`/leads?accountId=${encodeURIComponent(selectedAccountId)}`);
+    setLeads(result.data || []);
+  }
+
+  async function loadImports() {
+    if (!selectedAccountId) return;
+    const result = await request<LeadImport[]>(`/lead-imports?accountId=${encodeURIComponent(selectedAccountId)}`);
+    const next = result.data || [];
+    setLeadImports(next);
+    if (!activeImportId && next[0]) setActiveImportId(next[0].id);
   }
 
   async function createCampaign() {
-    if (!selectedAccountId) return setStatus('Create/select an account first.');
-    setStatus('Creating campaign...');
-    try {
-      const result = await request<Campaign>('/campaigns', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({
-          accountId: selectedAccountId,
-          name: campaignForm.name,
-          objective: campaignForm.objective,
-          status: 'draft',
-          settings: { manualOnly: true },
-          steps: [
-            {
-              stepNumber: 1,
-              type: 'email',
-              delay: { kind: 'after_enrollment', amount: 0, unit: 'minutes' },
-              subjectTemplate: 'Quick question, {{firstName}}',
-              bodyTemplate: 'Hi {{firstName}}, wanted to reach out about {{company}}.',
-            },
-          ],
-        }),
-      });
-      if (result.data) {
-        setCampaigns((prev) => [result.data!, ...prev]);
-        setStatus(`Campaign created: ${result.data.name} (manual mode)`);
-      } else {
-        setStatus(result.error?.message || 'Failed to create campaign');
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to create campaign');
-    }
+    if (!selectedAccountId) return setStatus("Create an account first.");
+    const active = activeImport;
+    const tags = Array.from(new Set(leads.flatMap((lead) => lead.tags))).filter(Boolean);
+    const customFields = Array.from(new Set(leads.flatMap((lead) => Object.keys(lead.customFields || {})))).filter(Boolean);
+    const result = await request<Campaign>("/campaigns", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({
+        accountId: selectedAccountId,
+        name: campaignName,
+        objective: campaignObjective,
+        status: "draft",
+        settings: { trackOpens, stopOnReply, customFields: active?.customFieldKeys?.length ? active.customFieldKeys : customFields, tags: active?.tagNames?.length ? active.tagNames : tags },
+        schedule: { timezone: scheduleTimezone, allowedDays, startHour: Number(startHour), endHour: Number(endHour) },
+        steps: [{ stepNumber: 1, type: "email", delay: { kind: "after_enrollment", amount: 0, unit: "days" }, subjectTemplate, bodyTemplate }],
+      }),
+    });
+    if (result.data) {
+      setCampaigns((prev) => [result.data!, ...prev]);
+      setStatus(`Campaign ready: ${result.data.name}`);
+    } else setStatus(result.error?.message || "Campaign creation failed");
   }
 
   async function loadCampaigns() {
-    if (!selectedAccountId) return setStatus('Select an account first.');
-    setStatus('Loading campaigns...');
-    try {
-      const result = await request<Campaign[]>(`/campaigns?accountId=${encodeURIComponent(selectedAccountId)}`);
-      setCampaigns(result.data || []);
-      setStatus('Campaigns loaded.');
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Failed to load campaigns');
-    }
+    if (!selectedAccountId) return;
+    const result = await request<Campaign[]>(`/campaigns?accountId=${encodeURIComponent(selectedAccountId)}`);
+    setCampaigns(result.data || []);
+  }
+
+  async function previewSpintax() {
+    const sampleLead = leads[0] || { firstName: "Alice", company: "Acme", customFields: { industry: "Fintech" } };
+    const values = { firstName: sampleLead.firstName || "there", company: sampleLead.company || "your company", ...(sampleLead.customFields || {}) };
+    const result = await request<{ rendered: string }>("/spintax/render", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ template: `${subjectTemplate}\n\n${bodyTemplate}`, values }),
+    });
+    setSpintaxPreview(result.data?.rendered || result.error?.message || "Preview failed");
   }
 
   React.useEffect(() => {
-    checkHealth();
-  }, []);
+    if (!selectedAccountId) return;
+    loadLeads();
+    loadImports();
+    loadCampaigns();
+  }, [selectedAccountId]);
+
+  function toggleDay(day: number) {
+    setAllowedDays((prev) => prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day].sort());
+  }
 
   return (
-    <div className="page-shell">
-      <header className="topbar">
-        <a className="brand" href="#top">
-          <span className="brand-mark">N</span>
-          <span className="brand-copy">
-            <strong>Neal</strong>
-            <em>Outreach operating system</em>
-          </span>
-        </a>
-
-        <nav className="nav">
-          <a href="#features">Features</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#dashboard">Dashboard</a>
-          <a href="#cta">Get started</a>
-        </nav>
-
-        <div className="topbar-actions">
-          <a className="button button-ghost" href="#dashboard">Open dashboard</a>
-          <a className="button button-primary" href="#dashboard">Start testing</a>
+    <div className="app-shell">
+      <header className="header card">
+        <div>
+          <div className="eyebrow">Outreach system v3</div>
+          <h1>Lemlist-style operator flow, shipped as a usable vertical slice.</h1>
+          <p>Upload CSV leads, map columns, create custom fields and tags, preview spintax, and build a campaign with schedule/settings in one screen.</p>
+        </div>
+        <div className="connection-grid">
+          <label><span>API base</span><input value={apiBase} onChange={(e) => setApiBase(e.target.value)} /></label>
+          <label><span>API key</span><input value={apiKey} onChange={(e) => setApiKey(e.target.value)} /></label>
+          <div className="status-box">{status}</div>
         </div>
       </header>
 
-      <main className="page" id="top">
-        <section className="hero-section">
-          <div className="hero-copy">
-            <span className="eyebrow">Research-led outbound infrastructure</span>
-            <h1>Launch, manage, and scale outbound from one clean operating system.</h1>
-            <p className="hero-lede">
-              Neal helps teams run campaigns, manage inboxes, protect deliverability, and handle replies without relying on a messy stack of disconnected tools.
-            </p>
-            <div className="hero-actions">
-              <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
-              <a className="button button-secondary button-large" href="#dashboard">Start testing</a>
-            </div>
-            <div className="hero-subnote">
-              Built for founders, operators, and teams that want better control over outbound execution.
-            </div>
-          </div>
+      <section className="grid two">
+        <article className="card">
+          <h2>1. Workspace</h2>
+          <label><span>Account name</span><input value={accountName} onChange={(e) => setAccountName(e.target.value)} /></label>
+          <div className="row"><button onClick={createAccount}>Create account</button></div>
+          <label>
+            <span>Active account</span>
+            <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
+              <option value="">Choose account</option>
+              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+            </select>
+          </label>
+          <label><span>Sending inbox</span><input value={inboxEmail} onChange={(e) => setInboxEmail(e.target.value)} /></label>
+          <div className="row"><button onClick={createInbox}>Create inbox</button></div>
+          {inboxes.length > 0 && <div className="stack">{inboxes.map((item) => <div className="pill" key={item.id}>{item.emailAddress} · {item.authStatus || "pending"}</div>)}</div>}
+        </article>
 
-          <div className="hero-visual">
-            <div className="ui-window primary-window">
-              <div className="ui-header">
-                <span />
-                <span />
-                <span />
-                <strong>Campaign overview</strong>
-              </div>
-              <div className="ui-grid">
-                <div className="ui-panel wide">
-                  <span className="panel-label">Campaign</span>
-                  <strong>Tanzania UHNI acquisition</strong>
-                  <p>4-step sequence · buyer-side advisory angle · review ready</p>
+        <article className="card">
+          <h2>2. Upload CSV</h2>
+          <label><span>File name</span><input value={fileName} onChange={(e) => setFileName(e.target.value)} /></label>
+          <label><span>CSV content</span><textarea rows={10} value={csvText} onChange={(e) => setCsvText(e.target.value)} /></label>
+          <div className="row"><button onClick={uploadCsv}>Upload import</button></div>
+          <div className="stack compact">
+            {leadImports.map((item) => (
+              <button key={item.id} className={`list-button ${activeImportId === item.id ? "active" : ""}`} onClick={() => { setActiveImportId(item.id); setMapping(item.mapping || {}); }}>
+                {item.fileName} · {item.totalRows} rows · {item.status}
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      {activeImport && (
+        <section className="grid two">
+          <article className="card">
+            <h2>3. Field mapping</h2>
+            <div className="stack">
+              {activeImport.headers.map((header) => (
+                <div className="mapping-row" key={header}>
+                  <strong>{header}</strong>
+                  <select value={mapping[header] || "ignore"} onChange={(e) => setMapping((prev) => ({ ...prev, [header]: e.target.value }))}>
+                    {fieldTargets.map((target) => <option key={target} value={target}>{target}</option>)}
+                    <option value={`custom:${header}`}>custom:{header}</option>
+                    <option value={`tag:${header}`}>tag:{header}</option>
+                  </select>
                 </div>
-                <div className="stat-card"><strong>112</strong><span>enrolled leads</span></div>
-                <div className="stat-card"><strong>61%</strong><span>capacity remaining</span></div>
-                <div className="stat-card"><strong>7</strong><span>replies to route</span></div>
-                <div className="stat-card"><strong>Healthy</strong><span>sender state</span></div>
-              </div>
+              ))}
             </div>
+            <div className="row">
+              <button onClick={saveMapping}>Save mapping</button>
+              <button className="secondary" onClick={commitImport}>Commit import</button>
+            </div>
+          </article>
 
-            <div className="floating-box left-box">
-              <span className="panel-label">Replies</span>
-              <strong>Interested lead detected</strong>
-              <p>Owner assignment and next action ready.</p>
+          <article className="card">
+            <h2>4. Import preview</h2>
+            <div className="meta-grid">
+              <div><span>Rows</span><strong>{activeImport.totalRows}</strong></div>
+              <div><span>Custom fields</span><strong>{activeImport.customFieldKeys.join(", ") || "—"}</strong></div>
+              <div><span>Tags</span><strong>{activeImport.tagNames.join(", ") || "—"}</strong></div>
+              <div><span>Imported leads</span><strong>{activeImport.createdLeadIds.length}</strong></div>
             </div>
-
-            <div className="floating-box right-box">
-              <span className="panel-label">Inbox health</span>
-              <strong>Safe sending window</strong>
-              <p>Pacing and caps within limits.</p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>{activeImport.headers.map((header) => <th key={header}>{header}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {activeImport.sampleRows.map((row, index) => (
+                    <tr key={index}>{activeImport.headers.map((header) => <td key={header}>{row[header]}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          </article>
         </section>
+      )}
 
-        <section className="metrics-strip">
-          {metrics.map((metric) => (
-            <article key={metric.label} className="metric-block">
-              <strong>{metric.value}</strong>
-              <p>{metric.label}</p>
-            </article>
+      <section className="grid two">
+        <article className="card">
+          <h2>5. Leads created</h2>
+          <div className="stack compact">
+            {leads.length === 0 ? <div className="empty">No imported leads yet.</div> : leads.map((lead) => (
+              <div className="lead-card" key={lead.id}>
+                <strong>{lead.email}</strong>
+                <span>{lead.firstName || "—"} · {lead.company || "—"}</span>
+                <span>Tags: {lead.tags.join(", ") || "—"}</span>
+                <span>Fields: {Object.keys(lead.customFields || {}).join(", ") || "—"}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="card">
+          <h2>6. Campaign builder</h2>
+          <label><span>Name</span><input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
+          <label><span>Objective</span><input value={campaignObjective} onChange={(e) => setCampaignObjective(e.target.value)} /></label>
+          <div className="grid two inner-grid">
+            <label><span>Timezone</span><input value={scheduleTimezone} onChange={(e) => setScheduleTimezone(e.target.value)} /></label>
+            <div>
+              <span className="label">Allowed days</span>
+              <div className="row wrap">{dayOptions.map((day) => <button key={day.value} className={allowedDays.includes(day.value) ? "chip active" : "chip"} onClick={() => toggleDay(day.value)}>{day.label}</button>)}</div>
+            </div>
+            <label><span>Start hour</span><input value={startHour} onChange={(e) => setStartHour(e.target.value)} /></label>
+            <label><span>End hour</span><input value={endHour} onChange={(e) => setEndHour(e.target.value)} /></label>
+          </div>
+          <div className="row wrap checkbox-row">
+            <label className="checkbox"><input type="checkbox" checked={trackOpens} onChange={(e) => setTrackOpens(e.target.checked)} /> Track opens</label>
+            <label className="checkbox"><input type="checkbox" checked={stopOnReply} onChange={(e) => setStopOnReply(e.target.checked)} /> Stop on reply</label>
+          </div>
+          <label><span>Subject template</span><input value={subjectTemplate} onChange={(e) => setSubjectTemplate(e.target.value)} /></label>
+          <label><span>Body template</span><textarea rows={8} value={bodyTemplate} onChange={(e) => setBodyTemplate(e.target.value)} /></label>
+          <div className="row">
+            <button onClick={previewSpintax}>Preview spintax</button>
+            <button className="secondary" onClick={createCampaign}>Create campaign</button>
+            <button className="secondary" onClick={loadCampaigns}>Load campaigns</button>
+          </div>
+          <div className="preview-box">{spintaxPreview || "Spintax preview will render here."}</div>
+        </article>
+      </section>
+
+      <section className="card">
+        <h2>7. Saved campaigns</h2>
+        <div className="stack compact">
+          {campaigns.length === 0 ? <div className="empty">No campaigns yet.</div> : campaigns.map((campaign) => (
+            <div className="campaign-card" key={campaign.id}>
+              <div>
+                <strong>{campaign.name}</strong>
+                <span>{campaign.objective || "—"}</span>
+              </div>
+              <div>
+                <span>{campaign.schedule.timezone} · {campaign.schedule.startHour}:00-{campaign.schedule.endHour}:00</span>
+                <span>{campaign.steps[0]?.subjectTemplate}</span>
+              </div>
+              <div>
+                <span>tags: {String(campaign.settings.tags || []).replace(/,/g, ", ") || "—"}</span>
+                <span>custom fields: {String(campaign.settings.customFields || []).replace(/,/g, ", ") || "—"}</span>
+              </div>
+              <div className="pill">{campaign.status}</div>
+            </div>
           ))}
-        </section>
-
-        <section className="features-section" id="features">
-          <div className="section-heading">
-            <span className="eyebrow">Why Neal</span>
-            <h2>A serious outbound system should feel controlled, not improvised.</h2>
-          </div>
-          <div className="feature-grid">
-            {features.map((feature) => (
-              <article key={feature.title} className="feature-card">
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="workflow-section" id="workflow">
-          <div className="section-heading split-heading">
-            <div>
-              <span className="eyebrow">How it works</span>
-              <h2>Everything from campaign setup to reply handling in one workflow.</h2>
-            </div>
-            <p>
-              Neal is designed to reduce operator friction while keeping campaign logic, inbox discipline, and reply visibility in the same system.
-            </p>
-          </div>
-          <div className="workflow-grid">
-            {workflow.map((item) => (
-              <article key={item.step} className="workflow-card">
-                <span>{item.step}</span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="dashboard-section" id="dashboard">
-          <div className="section-heading split-heading">
-            <div>
-              <span className="eyebrow">Manual dashboard</span>
-              <h2>Create Gmail inboxes, send manual test emails, add leads, and create campaigns.</h2>
-            </div>
-            <p>
-              Campaign automation remains paused. This dashboard is for manual setup and control only.
-            </p>
-          </div>
-
-          <div className="dashboard-grid">
-            <article className="dashboard-card full-span">
-              <div className="card-head">
-                <h3>Backend connection</h3>
-                <span className={health === 'Connected' ? 'badge success' : health === 'Failed' ? 'badge danger' : 'badge'}>{health}</span>
-              </div>
-              <div className="form-grid two-col-grid">
-                <label>
-                  API base URL
-                  <input value={apiBase} onChange={(e) => setApiBase(e.target.value)} placeholder="http://localhost:3000" />
-                </label>
-                <label>
-                  API key
-                  <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Bearer token if enabled" />
-                </label>
-              </div>
-              <div className="action-row"><button className="button button-primary" onClick={checkHealth}>Check backend</button></div>
-            </article>
-
-            <article className="dashboard-card">
-              <div className="card-head"><h3>Create account</h3></div>
-              <label>
-                Account name
-                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
-              </label>
-              <div className="action-row"><button className="button button-primary" onClick={createAccount}>Create account</button></div>
-              <label>
-                Active account
-                <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
-                  <option value="">Choose account</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                </select>
-              </label>
-            </article>
-
-            <article className="dashboard-card">
-              <div className="card-head"><h3>Create Gmail inbox</h3></div>
-              <label>
-                Gmail address
-                <input value={inboxForm.emailAddress} onChange={(e) => setInboxForm({ ...inboxForm, emailAddress: e.target.value })} placeholder="yourgmail@gmail.com" />
-              </label>
-              <label>
-                Display name
-                <input value={inboxForm.displayName} onChange={(e) => setInboxForm({ ...inboxForm, displayName: e.target.value })} placeholder="Gershon" />
-              </label>
-              <div className="form-grid two-col-grid">
-                <label>
-                  Daily limit
-                  <input value={inboxForm.dailyLimit} onChange={(e) => setInboxForm({ ...inboxForm, dailyLimit: e.target.value })} />
-                </label>
-                <label>
-                  Hourly limit
-                  <input value={inboxForm.hourlyLimit} onChange={(e) => setInboxForm({ ...inboxForm, hourlyLimit: e.target.value })} />
-                </label>
-              </div>
-              <div className="action-row"><button className="button button-primary" onClick={createInbox}>Create Gmail inbox</button></div>
-              <label>
-                Select inbox
-                <select value={selectedInboxId} onChange={(e) => setSelectedInboxId(e.target.value)}>
-                  <option value="">Choose inbox</option>
-                  {inboxes.map((inbox) => <option key={inbox.id} value={inbox.id}>{inbox.emailAddress} {inbox.authStatus ? `(${inbox.authStatus})` : ''}</option>)}
-                </select>
-              </label>
-              <div className="action-row"><button className="button button-secondary" onClick={connectInbox}>Mark inbox connected</button></div>
-            </article>
-
-            <article className="dashboard-card">
-              <div className="card-head"><h3>Manual Gmail test send</h3></div>
-              <label>
-                To
-                <input value={testSend.to} onChange={(e) => setTestSend({ ...testSend, to: e.target.value })} placeholder="recipient@example.com" />
-              </label>
-              <label>
-                Subject
-                <input value={testSend.subject} onChange={(e) => setTestSend({ ...testSend, subject: e.target.value })} />
-              </label>
-              <label>
-                Message
-                <textarea value={testSend.text} onChange={(e) => setTestSend({ ...testSend, text: e.target.value })} rows={5} />
-              </label>
-              <div className="action-row"><button className="button button-primary" onClick={sendTestEmail}>Send test email</button></div>
-            </article>
-
-            <article className="dashboard-card">
-              <div className="card-head"><h3>Add lead</h3></div>
-              <label>
-                Lead email
-                <input value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} />
-              </label>
-              <label>
-                First name
-                <input value={leadForm.firstName} onChange={(e) => setLeadForm({ ...leadForm, firstName: e.target.value })} />
-              </label>
-              <label>
-                Company
-                <input value={leadForm.company} onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })} />
-              </label>
-              <div className="action-row"><button className="button button-primary" onClick={createLead}>Create lead</button></div>
-            </article>
-
-            <article className="dashboard-card">
-              <div className="card-head"><h3>Create campaign</h3></div>
-              <label>
-                Campaign name
-                <input value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
-              </label>
-              <label>
-                Objective
-                <input value={campaignForm.objective} onChange={(e) => setCampaignForm({ ...campaignForm, objective: e.target.value })} />
-              </label>
-              <div className="action-row">
-                <button className="button button-primary" onClick={createCampaign}>Create campaign</button>
-                <button className="button button-secondary" onClick={loadCampaigns}>Load campaigns</button>
-              </div>
-            </article>
-
-            <article className="dashboard-card full-span">
-              <div className="card-head"><h3>Campaign list</h3></div>
-              {campaigns.length === 0 ? (
-                <div className="empty-box">No campaigns loaded yet.</div>
-              ) : (
-                <div className="list-box">
-                  {campaigns.map((campaign) => (
-                    <div key={campaign.id} className="list-item-row">
-                      <div>
-                        <strong>{campaign.name}</strong>
-                        <p>{campaign.objective || 'No objective set'}</p>
-                      </div>
-                      <span className="badge">{campaign.status}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-
-            <article className="dashboard-card full-span">
-              <div className="card-head"><h3>Recently created leads</h3></div>
-              {leads.length === 0 ? (
-                <div className="empty-box">No leads created in this session yet.</div>
-              ) : (
-                <div className="list-box">
-                  {leads.map((lead) => (
-                    <div key={lead.id} className="list-item-row">
-                      <div>
-                        <strong>{lead.email}</strong>
-                        <p>{lead.firstName || 'No first name'} · {lead.company || 'No company'}</p>
-                      </div>
-                      <span className="badge">lead</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-
-            <article className="dashboard-card full-span">
-              <div className="card-head"><h3>Status log</h3></div>
-              <div className="status-log">{status}</div>
-            </article>
-          </div>
-        </section>
-
-        <section className="proof-section" id="proof">
-          <div className="section-heading">
-            <span className="eyebrow">Proof</span>
-            <h2>Built for teams that care about message quality, operational control, and scaling without chaos.</h2>
-          </div>
-          <div className="testimonial-grid">
-            {testimonials.map((item) => (
-              <article key={item.author} className="testimonial-card">
-                <p>“{item.quote}”</p>
-                <div>
-                  <strong>{item.author}</strong>
-                  <span>{item.role}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="cta-section" id="cta">
-          <div>
-            <span className="eyebrow">Get started</span>
-            <h2>Start using a cleaner outbound system.</h2>
-            <p>
-              Set up campaigns, connect Gmail manually, and keep campaign automation paused until you are ready.
-            </p>
-          </div>
-          <div className="hero-actions">
-            <a className="button button-primary button-large" href="#dashboard">Open dashboard</a>
-            <a className="button button-secondary button-large" href="#dashboard">Start testing</a>
-          </div>
-        </section>
-      </main>
+        </div>
+      </section>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 );

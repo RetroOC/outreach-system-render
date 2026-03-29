@@ -8,6 +8,68 @@ import { verifyWebhookSignature } from "./http/webhooks.js";
 import { WorkerRuntime } from "./workerRuntime.js";
 import { OutboundService } from "./services/outboundService.js";
 
+function parseCsv(csv: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let current = "";
+  let row: string[] = [];
+  let inQuotes = false;
+
+  for (let i = 0; i < csv.length; i += 1) {
+    const char = csv[i];
+    const next = csv[i + 1];
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      row.push(current.trim());
+      current = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") i += 1;
+      row.push(current.trim());
+      current = "";
+      if (row.some((cell) => cell.length > 0)) rows.push(row);
+      row = [];
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.length > 0 || row.length > 0) {
+    row.push(current.trim());
+    if (row.some((cell) => cell.length > 0)) rows.push(row);
+  }
+
+  if (rows.length === 0) return [];
+  const headers = rows[0].map((item) => item.trim());
+  return rows.slice(1).map((cells) => {
+    const record: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      record[header || `column_${index + 1}`] = cells[index] ?? "";
+    });
+    return record;
+  });
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "field";
+}
+
+function renderSpintax(input: string): string {
+  return input.replace(/\{([^{}]+)\}/g, (_match, group) => {
+    const options = String(group).split("|").map((item) => item.trim()).filter(Boolean);
+    if (options.length === 0) return "";
+    return options[Math.floor(Math.random() * options.length)] ?? options[0];
+  });
+}
+
+function renderTemplate(input: string, values: Record<string, unknown>) {
+  return renderSpintax(input).replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, key) => String(values[key] ?? ""));
+}
+
 export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime; queue: JobQueue; workerRuntime: WorkerRuntime; outboundService: OutboundService }) {
   const { storage, scheduler, aiRuntime, queue } = deps;
 
@@ -71,9 +133,117 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       timezone: z.string().optional(),
       source: z.string().optional(),
       customFields: z.record(z.unknown()).default({}),
+      tags: z.array(z.string()).default([]),
     }).parse(request.body);
     reply.code(201);
     return { data: await storage.createLead(body) };
+  });
+
+  app.get("/leads", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listLeadsByAccountId(query.accountId) };
+  });
+
+  app.post("/lead-imports/upload", async (request, reply) => {
+    const body = z.object({ accountId: z.string(), fileName: z.string(), csv: z.string().min(1) }).parse(request.body);
+    const rows = parseCsv(body.csv);
+    const headers = rows[0] ? Object.keys(rows[0]) : [];
+    const leadImport = await storage.createLeadImport({
+      accountId: body.accountId,
+      fileName: body.fileName,
+      status: "uploaded",
+      headers,
+      sampleRows: rows.slice(0, 5),
+      totalRows: rows.length,
+      rows,
+      mapping: {},
+      customFieldKeys: [],
+      tagNames: [],
+      createdLeadIds: [],
+    });
+    reply.code(201);
+    return { data: leadImport };
+  });
+
+  app.get("/lead-imports", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listLeadImportsByAccountId(query.accountId) };
+  });
+
+  app.get("/lead-imports/:leadImportId", async (request) => {
+    const params = z.object({ leadImportId: z.string() }).parse(request.params);
+    const leadImport = await storage.getLeadImportById(params.leadImportId);
+    if (!leadImport) return { error: { code: "NOT_FOUND", message: "Lead import not found" } };
+    return { data: leadImport };
+  });
+
+  app.post("/lead-imports/:leadImportId/map", async (request) => {
+    const params = z.object({ leadImportId: z.string() }).parse(request.params);
+    const body = z.object({ mapping: z.record(z.string()) }).parse(request.body);
+    const leadImport = await storage.getLeadImportById(params.leadImportId);
+    if (!leadImport) return { error: { code: "NOT_FOUND", message: "Lead import not found" } };
+
+    const customFieldKeys = Object.entries(body.mapping)
+      .filter(([, target]) => target.startsWith("custom:"))
+      .map(([, target]) => slugify(target.replace(/^custom:/, "")));
+    const tagNames = Object.entries(body.mapping)
+      .filter(([, target]) => target.startsWith("tag:"))
+      .map(([, target]) => target.replace(/^tag:/, "").trim())
+      .filter(Boolean);
+
+    leadImport.mapping = body.mapping;
+    leadImport.customFieldKeys = Array.from(new Set(customFieldKeys));
+    leadImport.tagNames = Array.from(new Set(tagNames));
+    leadImport.status = "mapped";
+    await storage.updateLeadImport(leadImport);
+    return { data: leadImport };
+  });
+
+  app.post("/lead-imports/:leadImportId/commit", async (request) => {
+    const params = z.object({ leadImportId: z.string() }).parse(request.params);
+    const leadImport = await storage.getLeadImportById(params.leadImportId);
+    if (!leadImport) return { error: { code: "NOT_FOUND", message: "Lead import not found" } };
+    if (Object.keys(leadImport.mapping).length === 0) return { error: { code: "INVALID_STATE", message: "Lead import needs a mapping first" } };
+
+    const createdLeadIds: string[] = [];
+    for (const row of leadImport.rows) {
+      const customFields: Record<string, string> = {};
+      const tags = new Set<string>();
+      const standard: Record<string, string | undefined> = {};
+
+      for (const [column, target] of Object.entries(leadImport.mapping)) {
+        const rawValue = (row[column] ?? "").trim();
+        if (!rawValue || target === "ignore") continue;
+        if (target.startsWith("custom:")) {
+          customFields[slugify(target.replace(/^custom:/, ""))] = rawValue;
+        } else if (target.startsWith("tag:")) {
+          tags.add(target.replace(/^tag:/, "").trim());
+          if (["1", "true", "yes", "y"].includes(rawValue.toLowerCase())) tags.add(target.replace(/^tag:/, "").trim());
+        } else {
+          standard[target] = rawValue;
+        }
+      }
+
+      if (!standard.email) continue;
+      const lead = await storage.createLead({
+        accountId: leadImport.accountId,
+        email: standard.email,
+        firstName: standard.firstName,
+        lastName: standard.lastName,
+        company: standard.company,
+        title: standard.title,
+        timezone: standard.timezone,
+        source: standard.source ?? leadImport.fileName,
+        customFields,
+        tags: Array.from(tags).filter(Boolean),
+      });
+      createdLeadIds.push(lead.id);
+    }
+
+    leadImport.createdLeadIds = createdLeadIds;
+    leadImport.status = "imported";
+    await storage.updateLeadImport(leadImport);
+    return { data: { leadImportId: leadImport.id, created: createdLeadIds.length, leadIds: createdLeadIds } };
   });
 
   app.post("/campaigns", async (request, reply) => {
@@ -90,6 +260,12 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       status: z.enum(["draft", "active", "paused", "archived"]).default("draft"),
       objective: z.string().optional(),
       settings: z.record(z.unknown()).default({}),
+      schedule: z.object({
+        timezone: z.string().default("UTC"),
+        allowedDays: z.array(z.number().int().min(0).max(6)).default([1, 2, 3, 4, 5]),
+        startHour: z.number().int().min(0).max(23).default(9),
+        endHour: z.number().int().min(1).max(24).default(17),
+      }),
       steps: z.array(stepSchema).min(1),
     }).parse(request.body);
     reply.code(201);
@@ -144,6 +320,11 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     const enrollment = await storage.getEnrollmentById(params.enrollmentId);
     if (!enrollment) return { error: { code: "NOT_FOUND", message: "Enrollment not found" } };
     return { data: enrollment };
+  });
+
+  app.post("/spintax/render", async (request) => {
+    const body = z.object({ template: z.string(), values: z.record(z.unknown()).default({}) }).parse(request.body);
+    return { data: { rendered: renderTemplate(body.template, body.values) } };
   });
 
   app.post("/ops/scheduler/run", async () => ({ data: await scheduler.runDue() }));

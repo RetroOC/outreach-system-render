@@ -1,4 +1,4 @@
-import type { Account, Campaign, Enrollment, Inbox, Lead, Message, Thread } from "./domain.js";
+import type { Account, Campaign, Enrollment, Inbox, Lead, LeadImport, Message, Thread } from "./domain.js";
 
 const createId = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -6,6 +6,7 @@ export class InMemoryRepo {
   accounts = new Map<string, Account>();
   inboxes = new Map<string, Inbox>();
   leads = new Map<string, Lead>();
+  leadImports = new Map<string, LeadImport>();
   campaigns = new Map<string, Campaign>();
   enrollments = new Map<string, Enrollment>();
   threads = new Map<string, Thread>();
@@ -35,6 +36,13 @@ export class InMemoryRepo {
     const lead: Lead = { id: createId("lead"), status: "active", ...input };
     this.leads.set(lead.id, lead);
     return lead;
+  }
+
+  createLeadImport(input: Omit<LeadImport, "id" | "createdAt" | "updatedAt">): LeadImport {
+    const now = new Date().toISOString();
+    const leadImport: LeadImport = { id: createId("imp"), createdAt: now, updatedAt: now, ...input };
+    this.leadImports.set(leadImport.id, leadImport);
+    return leadImport;
   }
 
   createCampaign(input: Omit<Campaign, "id" | "scheduleVersion">): Campaign {

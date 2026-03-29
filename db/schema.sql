@@ -6,6 +6,7 @@ create type inbox_auth_status as enum ('pending', 'connected', 'expired');
 create type inbox_health_status as enum ('healthy', 'degraded', 'paused');
 create type lead_status as enum ('active', 'suppressed');
 create type campaign_status as enum ('draft', 'active', 'paused', 'archived');
+create type lead_import_status as enum ('uploaded', 'mapped', 'imported');
 create type enrollment_state as enum ('active', 'paused', 'processing', 'completed', 'replied', 'bounced', 'unsubscribed', 'failed');
 create type thread_state as enum ('open', 'replied', 'closed');
 create type message_direction as enum ('inbound', 'outbound');
@@ -50,10 +51,28 @@ create table if not exists leads (
   timezone text,
   source text,
   custom_fields jsonb not null default '{}'::jsonb,
+  tags jsonb not null default '[]'::jsonb,
   status lead_status not null default 'active',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(account_id, email)
+);
+
+create table if not exists lead_imports (
+  id text primary key,
+  account_id text not null references accounts(id) on delete cascade,
+  file_name text not null,
+  status lead_import_status not null default 'uploaded',
+  headers jsonb not null default '[]'::jsonb,
+  sample_rows jsonb not null default '[]'::jsonb,
+  total_rows integer not null default 0,
+  rows jsonb not null default '[]'::jsonb,
+  mapping jsonb not null default '{}'::jsonb,
+  custom_field_keys jsonb not null default '[]'::jsonb,
+  tag_names jsonb not null default '[]'::jsonb,
+  created_lead_ids jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists campaigns (
@@ -63,6 +82,7 @@ create table if not exists campaigns (
   status campaign_status not null default 'draft',
   objective text,
   settings jsonb not null default '{}'::jsonb,
+  schedule jsonb not null default '{"timezone":"UTC","allowedDays":[1,2,3,4,5],"startHour":9,"endHour":17}'::jsonb,
   schedule_version integer not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -192,6 +212,7 @@ create table if not exists jobs (
 
 create index if not exists idx_inboxes_account_id on inboxes(account_id);
 create index if not exists idx_leads_account_id on leads(account_id);
+create index if not exists idx_lead_imports_account_id on lead_imports(account_id);
 create index if not exists idx_campaigns_account_id on campaigns(account_id);
 create index if not exists idx_enrollments_campaign_id on enrollments(campaign_id);
 create index if not exists idx_enrollments_lead_id on enrollments(lead_id);

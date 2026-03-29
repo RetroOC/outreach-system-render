@@ -1,4 +1,4 @@
-import type { Account, Campaign, Enrollment, Inbox, Lead, Message, Thread } from "./domain.js";
+import type { Account, Campaign, Enrollment, Inbox, Lead, LeadImport, Message, Thread } from "./domain.js";
 
 export interface Storage {
   createAccount(input: Omit<Account, "id" | "createdAt">): Promise<Account>;
@@ -10,6 +10,12 @@ export interface Storage {
 
   createLead(input: Omit<Lead, "id" | "status">): Promise<Lead>;
   getLeadById(id: string): Promise<Lead | null>;
+  listLeadsByAccountId(accountId: string): Promise<Lead[]>;
+
+  createLeadImport(input: Omit<LeadImport, "id" | "createdAt" | "updatedAt">): Promise<LeadImport>;
+  getLeadImportById(id: string): Promise<LeadImport | null>;
+  updateLeadImport(leadImport: LeadImport): Promise<LeadImport>;
+  listLeadImportsByAccountId(accountId: string): Promise<LeadImport[]>;
 
   createCampaign(input: Omit<Campaign, "id" | "scheduleVersion">): Promise<Campaign>;
   getCampaignById(id: string): Promise<Campaign | null>;
