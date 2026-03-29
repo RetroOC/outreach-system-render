@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.openclaw/
+.clawhub/
+skills/
+*.log
+frontend/node_modules/
+frontend/dist/

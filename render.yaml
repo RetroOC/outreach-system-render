@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: outreach-mvp-api
+    runtime: node
+    repo: https://github.com/RetroOC/outreach-system-render
+    branch: master
+    rootDir: .
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+  - type: web
+    name: outreach-mvp-web
+    runtime: static
+    repo: https://github.com/RetroOC/outreach-system-render
+    branch: master
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
