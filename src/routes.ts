@@ -70,15 +70,57 @@ function renderTemplate(input: string, values: Record<string, unknown>) {
   return renderSpintax(input).replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, key) => String(values[key] ?? ""));
 }
 
+const stepSchema = z.object({
+  stepNumber: z.number().int().positive(),
+  type: z.literal("email"),
+  delay: z.object({ kind: z.enum(["after_enrollment", "after_previous_sent"]), amount: z.number().int().nonnegative(), unit: z.enum(["minutes", "hours", "days"]) }),
+  subjectTemplate: z.string(),
+  bodyTemplate: z.string(),
+});
+
 export async function registerRoutes(app: FastifyInstance, deps: { storage: Storage; scheduler: SchedulerService; aiRuntime: AiRuntime; queue: JobQueue; workerRuntime: WorkerRuntime; outboundService: OutboundService }) {
   const { storage, scheduler, aiRuntime, queue } = deps;
 
   app.get("/health", async () => ({ ok: true }));
 
+  app.get("/accounts", async () => ({ data: await storage.listAccounts() }));
+
   app.post("/accounts", async (request, reply) => {
     const body = z.object({ name: z.string(), settings: z.record(z.unknown()).default({}) }).parse(request.body);
     reply.code(201);
     return { data: await storage.createAccount(body) };
+  });
+
+  app.get("/accounts/:accountId", async (request) => {
+    const params = z.object({ accountId: z.string() }).parse(request.params);
+    const account = await storage.getAccountById(params.accountId);
+    if (!account) return { error: { code: "NOT_FOUND", message: "Account not found" } };
+    return { data: account };
+  });
+
+  app.get("/accounts/:accountId/inboxes", async (request) => {
+    const params = z.object({ accountId: z.string() }).parse(request.params);
+    return { data: await storage.listInboxesByAccountId(params.accountId) };
+  });
+
+  app.get("/accounts/:accountId/sequences", async (request) => {
+    const params = z.object({ accountId: z.string() }).parse(request.params);
+    return { data: await storage.listSequencesByAccountId(params.accountId) };
+  });
+
+  app.get("/accounts/:accountId/threads", async (request) => {
+    const params = z.object({ accountId: z.string() }).parse(request.params);
+    return { data: await storage.listThreadsByAccountId(params.accountId) };
+  });
+
+  app.get("/accounts/:accountId/messages", async (request) => {
+    const params = z.object({ accountId: z.string() }).parse(request.params);
+    return { data: await storage.listMessagesByAccountId(params.accountId) };
+  });
+
+  app.get("/inboxes", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listInboxesByAccountId(query.accountId) };
   });
 
   app.post("/inboxes", async (request, reply) => {
@@ -94,6 +136,18 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     }).parse(request.body);
     reply.code(201);
     return { data: await storage.createInbox(body) };
+  });
+
+  app.get("/inboxes/:inboxId", async (request) => {
+    const params = z.object({ inboxId: z.string() }).parse(request.params);
+    const inbox = await storage.getInboxById(params.inboxId);
+    if (!inbox) return { error: { code: "NOT_FOUND", message: "Inbox not found" } };
+    return { data: inbox };
+  });
+
+  app.get("/inboxes/:inboxId/threads", async (request) => {
+    const params = z.object({ inboxId: z.string() }).parse(request.params);
+    return { data: await storage.listThreadsByInboxId(params.inboxId) };
   });
 
   app.post("/inboxes/:inboxId/connect", async (request, reply) => {
@@ -114,12 +168,7 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       inbox.healthStatus = "degraded";
       await storage.updateInbox(inbox);
       reply.code(400);
-      return {
-        error: {
-          code: "INBOX_CONNECT_FAILED",
-          message: error instanceof Error ? error.message : "Inbox connection failed",
-        },
-      };
+      return { error: { code: "INBOX_CONNECT_FAILED", message: error instanceof Error ? error.message : "Inbox connection failed" } };
     }
   });
 
@@ -138,6 +187,57 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     const inbox = await storage.getInboxById(params.inboxId);
     if (!inbox) return { error: { code: "NOT_FOUND", message: "Inbox not found" } };
     return { data: { ...inbox, remainingToday: inbox.dailyLimit - inbox.sentToday - inbox.reservedToday } };
+  });
+
+  app.get("/sender-emails", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listInboxesByAccountId(query.accountId) };
+  });
+
+  app.post("/sequences", async (request, reply) => {
+    const body = z.object({
+      accountId: z.string(),
+      name: z.string(),
+      objective: z.string().optional(),
+      status: z.enum(["draft", "active", "archived"]).default("draft"),
+      settings: z.record(z.unknown()).default({}),
+      steps: z.array(stepSchema).min(1),
+    }).parse(request.body);
+    reply.code(201);
+    return { data: await storage.createSequence(body) };
+  });
+
+  app.get("/sequences", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listSequencesByAccountId(query.accountId) };
+  });
+
+  app.get("/sequences/:sequenceId", async (request) => {
+    const params = z.object({ sequenceId: z.string() }).parse(request.params);
+    const sequence = await storage.getSequenceById(params.sequenceId);
+    if (!sequence) return { error: { code: "NOT_FOUND", message: "Sequence not found" } };
+    return { data: sequence };
+  });
+
+  app.put("/sequences/:sequenceId", async (request) => {
+    const params = z.object({ sequenceId: z.string() }).parse(request.params);
+    const existing = await storage.getSequenceById(params.sequenceId);
+    if (!existing) return { error: { code: "NOT_FOUND", message: "Sequence not found" } };
+    const body = z.object({
+      name: z.string(),
+      objective: z.string().optional(),
+      status: z.enum(["draft", "active", "archived"]),
+      settings: z.record(z.unknown()).default({}),
+      steps: z.array(stepSchema).min(1),
+    }).parse(request.body);
+    return { data: await storage.updateSequence({ ...existing, ...body, id: existing.id, accountId: existing.accountId, createdAt: existing.createdAt, updatedAt: existing.updatedAt }) };
+  });
+
+  app.delete("/sequences/:sequenceId", async (request) => {
+    const params = z.object({ sequenceId: z.string() }).parse(request.params);
+    const deleted = await storage.deleteSequence(params.sequenceId);
+    if (!deleted) return { error: { code: "NOT_FOUND", message: "Sequence not found" } };
+    return { data: { deleted: true, id: params.sequenceId } };
   });
 
   app.post("/leads", async (request, reply) => {
@@ -232,14 +332,11 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       for (const [column, target] of Object.entries(leadImport.mapping)) {
         const rawValue = (row[column] ?? "").trim();
         if (!rawValue || target === "ignore") continue;
-        if (target.startsWith("custom:")) {
-          customFields[slugify(target.replace(/^custom:/, ""))] = rawValue;
-        } else if (target.startsWith("tag:")) {
+        if (target.startsWith("custom:")) customFields[slugify(target.replace(/^custom:/, ""))] = rawValue;
+        else if (target.startsWith("tag:")) {
           tags.add(target.replace(/^tag:/, "").trim());
           if (["1", "true", "yes", "y"].includes(rawValue.toLowerCase())) tags.add(target.replace(/^tag:/, "").trim());
-        } else {
-          standard[target] = rawValue;
-        }
+        } else standard[target] = rawValue;
       }
 
       if (!standard.email) continue;
@@ -265,13 +362,6 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
   });
 
   app.post("/campaigns", async (request, reply) => {
-    const stepSchema = z.object({
-      stepNumber: z.number().int().positive(),
-      type: z.literal("email"),
-      delay: z.object({ kind: z.enum(["after_enrollment", "after_previous_sent"]), amount: z.number().int().nonnegative(), unit: z.enum(["minutes", "hours", "days"]) }),
-      subjectTemplate: z.string(),
-      bodyTemplate: z.string(),
-    });
     const body = z.object({
       accountId: z.string(),
       name: z.string(),
@@ -288,6 +378,28 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     }).parse(request.body);
     reply.code(201);
     return { data: await storage.createCampaign(body) };
+  });
+
+  app.get("/campaigns", async (request) => {
+    const query = z.object({ accountId: z.string() }).parse(request.query);
+    return { data: await storage.listCampaignsByAccountId(query.accountId) };
+  });
+
+  app.get("/campaigns/:campaignId", async (request) => {
+    const params = z.object({ campaignId: z.string() }).parse(request.params);
+    const detail = await storage.getCampaignDetailById(params.campaignId);
+    if (!detail) return { error: { code: "NOT_FOUND", message: "Campaign not found" } };
+    return { data: detail };
+  });
+
+  app.get("/campaigns/:campaignId/stats", async (request) => {
+    const params = z.object({ campaignId: z.string() }).parse(request.params);
+    return { data: await storage.getCampaignStats(params.campaignId) };
+  });
+
+  app.get("/campaigns/:campaignId/enrollments", async (request) => {
+    const params = z.object({ campaignId: z.string() }).parse(request.params);
+    return { data: await storage.listEnrollmentsByCampaignId(params.campaignId) };
   });
 
   app.post("/campaigns/:campaignId/start", async (request) => {
@@ -319,13 +431,7 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
         stopReason: null,
       });
       await scheduler.scheduleFirstStep(enrollment);
-      await storage.createThread({
-        enrollmentId: enrollment.id,
-        leadId,
-        inboxId: body.inboxId,
-        state: "open",
-        lastMessageAt: new Date().toISOString(),
-      });
+      await storage.createThread({ enrollmentId: enrollment.id, leadId, inboxId: body.inboxId, state: "open", lastMessageAt: new Date().toISOString() });
       created.push(enrollment.id);
     }
 
@@ -338,6 +444,18 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     const enrollment = await storage.getEnrollmentById(params.enrollmentId);
     if (!enrollment) return { error: { code: "NOT_FOUND", message: "Enrollment not found" } };
     return { data: enrollment };
+  });
+
+  app.get("/threads/:threadId", async (request) => {
+    const params = z.object({ threadId: z.string() }).parse(request.params);
+    const thread = await storage.getThreadById(params.threadId);
+    if (!thread) return { error: { code: "NOT_FOUND", message: "Thread not found" } };
+    return { data: thread };
+  });
+
+  app.get("/threads/:threadId/messages", async (request) => {
+    const params = z.object({ threadId: z.string() }).parse(request.params);
+    return { data: await storage.listMessagesByThreadId(params.threadId) };
   });
 
   app.post("/spintax/render", async (request) => {
@@ -370,13 +488,7 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
       if (classification.label === "unsubscribe") {
         const thread = await storage.getThreadById(message.threadId);
         const lead = thread ? await storage.getLeadById(thread.leadId) : null;
-        if (lead) {
-          await storage.createSuppression({
-            accountId: lead.accountId,
-            email: lead.email,
-            reason: "unsubscribe",
-          });
-        }
+        if (lead) await storage.createSuppression({ accountId: lead.accountId, email: lead.email, reason: "unsubscribe" });
       }
     }
     return { data: result };
@@ -403,26 +515,6 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     const body = z.object({ accountId: z.string(), email: z.string().email(), reason: z.string() }).parse(request.body);
     reply.code(201);
     return { data: await storage.createSuppression(body) };
-  });
-
-  app.get("/campaigns", async (request) => {
-    const query = z.object({ accountId: z.string() }).parse(request.query);
-    return { data: await storage.listCampaignsByAccountId(query.accountId) };
-  });
-
-  app.get("/campaigns/:campaignId/stats", async (request) => {
-    const params = z.object({ campaignId: z.string() }).parse(request.params);
-    const enrollments = await storage.listEnrollmentsByCampaignId(params.campaignId);
-    const totals = {
-      enrolled: enrollments.length,
-      active: enrollments.filter((item) => item.state === "active").length,
-      completed: enrollments.filter((item) => item.state === "completed").length,
-      replied: enrollments.filter((item) => item.state === "replied").length,
-      bounced: enrollments.filter((item) => item.state === "bounced").length,
-      unsubscribed: enrollments.filter((item) => item.state === "unsubscribed").length,
-      failed: enrollments.filter((item) => item.state === "failed").length,
-    };
-    return { data: { campaignId: params.campaignId, ...totals } };
   });
 
   app.post("/webhooks/providers/:provider", async (request, reply) => {

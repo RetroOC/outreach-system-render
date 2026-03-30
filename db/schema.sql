@@ -2,17 +2,18 @@
 
 create extension if not exists pgcrypto;
 
-create type inbox_auth_status as enum ('pending', 'connected', 'expired');
-create type inbox_health_status as enum ('healthy', 'degraded', 'paused');
-create type lead_status as enum ('active', 'suppressed');
-create type campaign_status as enum ('draft', 'active', 'paused', 'archived');
-create type lead_import_status as enum ('uploaded', 'mapped', 'imported');
-create type enrollment_state as enum ('active', 'paused', 'processing', 'completed', 'replied', 'bounced', 'unsubscribed', 'failed');
-create type thread_state as enum ('open', 'replied', 'closed');
-create type message_direction as enum ('inbound', 'outbound');
-create type ai_task_name as enum ('reply_classification', 'unsubscribe_detection', 'out_of_office_detection', 'reply_draft', 'personalization_snippet');
-create type ai_run_status as enum ('success', 'failed');
-create type job_status as enum ('pending', 'processing', 'completed', 'failed');
+do $$ begin create type inbox_auth_status as enum ('pending', 'connected', 'expired'); exception when duplicate_object then null; end $$;
+do $$ begin create type inbox_health_status as enum ('healthy', 'degraded', 'paused'); exception when duplicate_object then null; end $$;
+do $$ begin create type lead_status as enum ('active', 'suppressed'); exception when duplicate_object then null; end $$;
+do $$ begin create type campaign_status as enum ('draft', 'active', 'paused', 'archived'); exception when duplicate_object then null; end $$;
+do $$ begin create type sequence_status as enum ('draft', 'active', 'archived'); exception when duplicate_object then null; end $$;
+do $$ begin create type lead_import_status as enum ('uploaded', 'mapped', 'imported'); exception when duplicate_object then null; end $$;
+do $$ begin create type enrollment_state as enum ('active', 'paused', 'processing', 'completed', 'replied', 'bounced', 'unsubscribed', 'failed'); exception when duplicate_object then null; end $$;
+do $$ begin create type thread_state as enum ('open', 'replied', 'closed'); exception when duplicate_object then null; end $$;
+do $$ begin create type message_direction as enum ('inbound', 'outbound'); exception when duplicate_object then null; end $$;
+do $$ begin create type ai_task_name as enum ('reply_classification', 'unsubscribe_detection', 'out_of_office_detection', 'reply_draft', 'personalization_snippet'); exception when duplicate_object then null; end $$;
+do $$ begin create type ai_run_status as enum ('success', 'failed'); exception when duplicate_object then null; end $$;
+do $$ begin create type job_status as enum ('pending', 'processing', 'completed', 'failed'); exception when duplicate_object then null; end $$;
 
 create table if not exists accounts (
   id text primary key,
@@ -88,6 +89,17 @@ create table if not exists campaigns (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists sequences (
+  id text primary key,
+  account_id text not null references accounts(id) on delete cascade,
+  name text not null,
+  objective text,
+  status sequence_status not null default 'draft',
+  settings jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists campaign_steps (
   id text primary key,
   campaign_id text not null references campaigns(id) on delete cascade,
@@ -100,6 +112,20 @@ create table if not exists campaign_steps (
   body_template text not null,
   created_at timestamptz not null default now(),
   unique(campaign_id, step_number)
+);
+
+create table if not exists sequence_steps (
+  id text primary key,
+  sequence_id text not null references sequences(id) on delete cascade,
+  step_number integer not null,
+  type text not null,
+  delay_kind text not null,
+  delay_amount integer not null,
+  delay_unit text not null,
+  subject_template text not null,
+  body_template text not null,
+  created_at timestamptz not null default now(),
+  unique(sequence_id, step_number)
 );
 
 create table if not exists enrollments (
@@ -214,6 +240,7 @@ create index if not exists idx_inboxes_account_id on inboxes(account_id);
 create index if not exists idx_leads_account_id on leads(account_id);
 create index if not exists idx_lead_imports_account_id on lead_imports(account_id);
 create index if not exists idx_campaigns_account_id on campaigns(account_id);
+create index if not exists idx_sequences_account_id on sequences(account_id);
 create index if not exists idx_enrollments_campaign_id on enrollments(campaign_id);
 create index if not exists idx_enrollments_lead_id on enrollments(lead_id);
 create index if not exists idx_enrollments_state_next_action_at on enrollments(state, next_action_at);

@@ -66,6 +66,8 @@ export type CampaignSettings = {
   dailySendLimit?: number;
   customFields?: string[];
   tags?: string[];
+  sourceSequenceId?: string;
+  sourceSequenceName?: string;
   [key: string]: unknown;
 };
 
@@ -79,6 +81,18 @@ export type Campaign = {
   schedule: CampaignSchedule;
   steps: CampaignStep[];
   scheduleVersion: number;
+};
+
+export type Sequence = {
+  id: EntityId;
+  accountId: EntityId;
+  name: string;
+  objective?: string;
+  status: "draft" | "active" | "archived";
+  settings: Record<string, unknown>;
+  steps: CampaignStep[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type LeadImport = {
@@ -131,4 +145,32 @@ export type Message = {
   receivedAt?: string;
   sentAt?: string;
   classification?: Record<string, unknown>;
+};
+
+export type CampaignStats = {
+  campaignId: EntityId;
+  enrolled: number;
+  active: number;
+  completed: number;
+  replied: number;
+  bounced: number;
+  unsubscribed: number;
+  failed: number;
+};
+
+export type CampaignDetail = {
+  campaign: Campaign;
+  stats: CampaignStats;
+  enrollments: Enrollment[];
+  linkedSequence: Sequence | null;
+};
+
+export type ThreadSummary = {
+  thread: Thread;
+  lead: Lead | null;
+  inbox: Inbox | null;
+  campaign: Campaign | null;
+  latestMessage: Message | null;
+  messageCount: number;
+  unreadCount: number;
 };
