@@ -186,6 +186,7 @@ function App() {
   const [testBody, setTestBody] = React.useState("This is a test email from Bison Ops.");
   const [senderName, setSenderName] = React.useState("New sender");
   const [senderEmail, setSenderEmail] = React.useState("new-sender@bisonops.co");
+  const [selectedThreadId, setSelectedThreadId] = React.useState(mockThreads[0]?.id || "");
 
   React.useEffect(() => {
     if (!warmupRows.length) setWarmupRows(defaultWarmup(senders));
@@ -474,6 +475,7 @@ function App() {
   }
 
   const bars = miniBarHeights([42, 51, 49, 67, 73, 69, 84, 79, 88, 97, 93, 104]);
+  const selectedThread = React.useMemo(() => mockThreads.find((thread) => thread.id === selectedThreadId) || mockThreads[0], [selectedThreadId]);
   const totalActive = Object.values(campaignStats).reduce((sum, item) => sum + item.active, 0);
   const totalReplied = Object.values(campaignStats).reduce((sum, item) => sum + item.replied, 0);
   const totalEnrolled = Object.values(campaignStats).reduce((sum, item) => sum + item.enrolled, 0);
@@ -641,7 +643,7 @@ function App() {
                 <input value={leadSearch} onChange={(e) => setLeadSearch(e.target.value)} placeholder="Search by lead, company, title, tag" />
                 <button className="secondary" onClick={toggleAllLeads}>{selectedLeadIds.length === filteredLeads.length && filteredLeads.length ? "Clear selection" : "Select visible"}</button>
               </div>
-              <div className="table-wrap table-wrap-strong">
+              <div className="table-wrap table-wrap-strong dense-table">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -721,14 +723,14 @@ function App() {
                 </div>
                 <div className="panel-actions"><button onClick={createCampaign}>Save campaign</button><button className="secondary" onClick={() => setShowScheduleModal(true)}>Edit schedule</button></div>
               </div>
-              <div className="flow-tabs">
-                {flowTabs.map((tab) => <button key={tab.key} className={campaignFlowTab === tab.key ? "flow-tab active" : "flow-tab"} onClick={() => setCampaignFlowTab(tab.key)}>{tab.label}</button>)}
+              <div className="flow-tabs flow-tabs-progress">
+                {flowTabs.map((tab, index) => <button key={tab.key} className={campaignFlowTab === tab.key ? "flow-tab active" : "flow-tab"} onClick={() => setCampaignFlowTab(tab.key)}><span className="flow-index">{index + 1}</span>{tab.label}</button>)}
               </div>
             </div>
 
             <div className="panel panel-span-5 campaigns-table-panel">
               <div className="section-header"><h3>Campaigns</h3><span>Backend-backed list</span></div>
-              <div className="table-wrap table-wrap-strong">
+              <div className="table-wrap table-wrap-strong dense-table">
                 <table className="data-table">
                   <thead><tr><th>Name</th><th>Status</th><th>Steps</th><th>Enrolled</th></tr></thead>
                   <tbody>
@@ -769,6 +771,11 @@ function App() {
 
             {campaignFlowTab === "sequence" && (
               <div className="panel panel-span-7 sequence-editor-shell">
+                <div className="sequence-summary-strip">
+                  <div><span>Total steps</span><strong>{sequenceDraft.steps.length}</strong></div>
+                  <div><span>Wait time</span><strong>{sequenceDraft.steps.reduce((sum, step) => sum + Number(step.delay.amount || 0), 0)} days</strong></div>
+                  <div><span>Primary goal</span><strong>{sequenceDraft.objective}</strong></div>
+                </div>
                 <div className="sequence-toolbar">
                   <div className="mini-tabs">
                     <button className="mini-tab active">Steps</button>
@@ -850,6 +857,11 @@ function App() {
             {campaignFlowTab === "senders" && (
               <div className="panel panel-span-7">
                 <div className="section-header"><h3>Sender email allocation</h3><span>Choose the mailbox for launch</span></div>
+                <div className="sender-health-strip">
+                  <div className="mini-stat"><span>Ready</span><strong>{senders.filter((sender) => sender.status === "ready").length}</strong></div>
+                  <div className="mini-stat"><span>Warming</span><strong>{senders.filter((sender) => sender.status === "warming").length}</strong></div>
+                  <div className="mini-stat"><span>Needs attention</span><strong>{senders.filter((sender) => sender.status === "needs_attention").length}</strong></div>
+                </div>
                 <div className="sender-list">
                   {senders.map((sender) => (
                     <label key={sender.id} className={launchInboxId && accountInboxes.some((box) => box.id === launchInboxId && box.emailAddress === sender.email) ? "sender-row active" : "sender-row"}>
@@ -882,11 +894,26 @@ function App() {
 
         {nav === "inbox" && (
           <section className="page-grid master-inbox-grid">
+            <div className="panel panel-span-12 inbox-toolbar-panel">
+              <div className="inbox-toolbar">
+                <div className="filter-strip compact-strip">
+                  <div className="filter-chip active">All inboxes</div>
+                  <div className="filter-chip">Unassigned</div>
+                  <div className="filter-chip">Positive</div>
+                  <div className="filter-chip">Needs reply</div>
+                </div>
+                <div className="inbox-metrics">
+                  <div><span>Unread</span><strong>{mockThreads.filter((thread) => thread.unread).length}</strong></div>
+                  <div><span>Positive</span><strong>{mockThreads.filter((thread) => thread.state === "positive").length}</strong></div>
+                  <div><span>Waiting</span><strong>{mockThreads.filter((thread) => thread.state === "waiting").length}</strong></div>
+                </div>
+              </div>
+            </div>
             <div className="panel panel-span-4 inbox-thread-panel">
               <div className="section-header"><h3>Conversations</h3><span>Local inbox shell</span></div>
               <div className="thread-list">
                 {mockThreads.map((thread) => (
-                  <button key={thread.id} className={thread.unread ? "thread-card unread" : "thread-card"}>
+                  <button key={thread.id} className={selectedThreadId === thread.id ? "thread-card active" : thread.unread ? "thread-card unread" : "thread-card"} onClick={() => setSelectedThreadId(thread.id)}>
                     <div className="thread-top"><strong>{thread.name}</strong><span>{thread.at}</span></div>
                     <div className="thread-company">{thread.company} · {thread.channel}</div>
                     <div className="thread-subject">{thread.subject}</div>
@@ -897,6 +924,14 @@ function App() {
             </div>
             <div className="panel panel-span-8 inbox-detail-panel">
               <div className="section-header"><h3>Reply workspace</h3><span>Master inbox layout</span></div>
+              <div className="reply-header-card">
+                <div>
+                  <div className="eyebrow">{selectedThread?.channel}</div>
+                  <h4>{selectedThread?.subject}</h4>
+                  <p>{selectedThread?.name} · {selectedThread?.company}</p>
+                </div>
+                <span className={`status-pill thread-state ${selectedThread?.state}`}>{selectedThread?.state}</span>
+              </div>
               <div className="filter-strip compact-strip">
                 <div className="filter-chip active">Unread</div>
                 <div className="filter-chip">Positive</div>
@@ -904,7 +939,7 @@ function App() {
                 <div className="filter-chip">Closed</div>
               </div>
               <div className="reply-thread-shell">
-                <div className="message-bubble inbound"><strong>Alice Morgan</strong><p>Happy to look at this next week — can you send a few times?</p><span>2 min ago</span></div>
+                <div className="message-bubble inbound"><strong>{selectedThread?.name}</strong><p>{selectedThread?.preview}</p><span>{selectedThread?.at}</span></div>
                 <div className="message-bubble outbound"><strong>{auth.operatorName}</strong><p>Absolutely — I can do Wednesday 11:00 CET or Thursday 14:30 CET. Which works best?</p><span>Draft reply</span></div>
               </div>
               <label><span>Reply draft</span><textarea rows={9} defaultValue={"Absolutely — I can do Wednesday 11:00 CET or Thursday 14:30 CET. Which works best?"} /></label>
@@ -915,6 +950,14 @@ function App() {
 
         {nav === "senders" && (
           <section className="page-grid senders-grid">
+            <div className="panel panel-span-12 senders-overview-panel">
+              <div className="senders-overview-grid">
+                <div className="overview-card"><span>Total sender emails</span><strong>{senders.length}</strong><small>Mailbox fleet</small></div>
+                <div className="overview-card"><span>Avg. reputation</span><strong>{Math.round(senders.reduce((sum, sender) => sum + sender.reputation, 0) / Math.max(senders.length, 1))}</strong><small>Across all senders</small></div>
+                <div className="overview-card"><span>Daily capacity</span><strong>{senders.reduce((sum, sender) => sum + sender.dailyLimit, 0)}</strong><small>Planned sends/day</small></div>
+                <div className="overview-card"><span>Connected inboxes</span><strong>{accountInboxes.length}</strong><small>Backend records</small></div>
+              </div>
+            </div>
             <div className="panel panel-span-4">
               <div className="section-header"><h3>Add sender email</h3><span>Frontend-local for now</span></div>
               <label><span>Name</span><input value={senderName} onChange={(e) => setSenderName(e.target.value)} /></label>
@@ -926,7 +969,7 @@ function App() {
             </div>
             <div className="panel panel-span-8">
               <div className="section-header"><h3>Sender email table</h3><span>Product-grade list</span></div>
-              <div className="table-wrap table-wrap-strong">
+              <div className="table-wrap table-wrap-strong dense-table">
                 <table className="data-table">
                   <thead><tr><th>Mailbox</th><th>Provider</th><th>Reputation</th><th>Daily limit</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
@@ -949,6 +992,14 @@ function App() {
 
         {nav === "warmup" && (
           <section className="page-grid warmup-grid">
+            <div className="panel panel-span-12 warmup-summary-panel">
+              <div className="senders-overview-grid">
+                <div className="overview-card"><span>Warmup mailboxes</span><strong>{warmupRows.length}</strong><small>Tracked locally</small></div>
+                <div className="overview-card"><span>Avg. progress</span><strong>{Math.round(warmupRows.reduce((sum, row) => sum + row.progress, 0) / Math.max(warmupRows.length, 1))}%</strong><small>Across the pool</small></div>
+                <div className="overview-card"><span>Replies today</span><strong>{warmupRows.reduce((sum, row) => sum + row.replies, 0)}</strong><small>Warmup engagement</small></div>
+                <div className="overview-card"><span>Opens today</span><strong>{warmupRows.reduce((sum, row) => sum + row.opened, 0)}</strong><small>Inbox activity</small></div>
+              </div>
+            </div>
             <div className="panel panel-span-12">
               <div className="section-header"><h3>Warmup overview</h3><span>Local warmup dashboard until backend support exists</span></div>
               <div className="warmup-cards">
