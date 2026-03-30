@@ -142,6 +142,7 @@ function App() {
     operatorName: "Gershon",
   });
   const [nav, setNav] = React.useState<NavKey>("overview");
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [status, setStatus] = React.useState("Ready.");
   const [accounts, setAccounts] = useLocalStorageState<Account[]>(STORAGE_KEYS.accounts, []);
   const [selectedAccountId, setSelectedAccountId] = React.useState("");
@@ -464,6 +465,7 @@ function App() {
   }
   function toggleAllLeads() { setSelectedLeadIds((prev) => prev.length === filteredLeads.length ? [] : filteredLeads.map((lead) => lead.id)); }
   function toggleDay(day: number) { setAllowedDays((prev) => prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day].sort()); }
+  function changeNav(next: NavKey) { setNav(next); setSidebarOpen(false); }
   function signIn() { localStorage.setItem(STORAGE_KEYS.auth, JSON.stringify(auth)); setAuthed(true); setStatus("Signed in."); }
   function signOut() { localStorage.removeItem(STORAGE_KEYS.auth); setAuthed(false); }
 
@@ -510,7 +512,9 @@ function App() {
 
   return (
     <div className="product-shell bison-shell">
-      <aside className="sidebar sidebar-polished">
+      <button className="mobile-sidebar-toggle" onClick={() => setSidebarOpen(true)}>☰ Menu</button>
+      {sidebarOpen && <button className="sidebar-overlay" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
+      <aside className={sidebarOpen ? "sidebar sidebar-polished mobile-open" : "sidebar sidebar-polished"}>
         <div className="brand-block brand-block-strong">
           <div className="brand-mark">B</div>
           <div>
@@ -523,7 +527,7 @@ function App() {
           <span className="sidebar-label">Workspace</span>
           <nav className="nav-stack">
             {navItems.map((item) => (
-              <button key={item.key} className={nav === item.key ? "nav-item active" : "nav-item"} onClick={() => setNav(item.key)}>
+              <button key={item.key} className={nav === item.key ? "nav-item active" : "nav-item"} onClick={() => changeNav(item.key)}>
                 <div className="nav-item-main"><span className="nav-icon">{item.icon}</span><span>{item.label}</span></div>
                 <small>{item.kicker}</small>
               </button>
@@ -533,7 +537,7 @@ function App() {
 
         <div className="sidebar-note sidebar-note-elevated">
           <strong>Working account</strong>
-          <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
+          <select value={selectedAccountId} onChange={(e) => { setSelectedAccountId(e.target.value); setSidebarOpen(false); }}>
             <option value="">Select account</option>
             {accounts.map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}
           </select>
@@ -548,6 +552,7 @@ function App() {
             <h1>{nav === "overview" ? "Outbound dashboard" : nav === "leads" ? "Lead database" : nav === "campaigns" ? "Campaign builder" : nav === "inbox" ? "Master inbox" : nav === "senders" ? "Sender emails" : "Warmup center"}</h1>
           </div>
           <div className="topbar-actions">
+            <button className="mobile-topbar-button" onClick={() => setSidebarOpen(true)}>☰</button>
             <div className="search-pill">⌘K · Search leads, campaigns, senders</div>
             <div className="operator-pill">
               <div className="avatar">{initials(auth.operatorName)}</div>
@@ -644,7 +649,7 @@ function App() {
                 <button className="secondary" onClick={toggleAllLeads}>{selectedLeadIds.length === filteredLeads.length && filteredLeads.length ? "Clear selection" : "Select visible"}</button>
               </div>
               <div className="table-wrap table-wrap-strong dense-table">
-                <table className="data-table">
+                <table className="data-table responsive-table">
                   <thead>
                     <tr>
                       <th></th>
@@ -658,12 +663,12 @@ function App() {
                   <tbody>
                     {filteredLeads.map((lead) => (
                       <tr key={lead.id}>
-                        <td><input type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggleLeadSelection(lead.id)} /></td>
-                        <td><div className="person-cell"><strong>{[lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.email}</strong><span>{lead.email}</span></div></td>
-                        <td>{lead.company || "—"}</td>
-                        <td>{lead.title || "—"}</td>
-                        <td>{lead.source || "Manual"}</td>
-                        <td><div className="token-row">{lead.tags.length ? lead.tags.slice(0, 2).map((tag) => <span key={tag} className="token">{tag}</span>) : <span className="muted">—</span>}</div></td>
+                        <td data-label="Select"><input type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggleLeadSelection(lead.id)} /></td>
+                        <td data-label="Name"><div className="person-cell"><strong>{[lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.email}</strong><span>{lead.email}</span></div></td>
+                        <td data-label="Company">{lead.company || "—"}</td>
+                        <td data-label="Title">{lead.title || "—"}</td>
+                        <td data-label="Source">{lead.source || "Manual"}</td>
+                        <td data-label="Tags"><div className="token-row">{lead.tags.length ? lead.tags.slice(0, 2).map((tag) => <span key={tag} className="token">{tag}</span>) : <span className="muted">—</span>}</div></td>
                       </tr>
                     ))}
                     {!filteredLeads.length && <tr><td colSpan={6}><div className="empty-state">No leads loaded yet.</div></td></tr>}
@@ -731,17 +736,17 @@ function App() {
             <div className="panel panel-span-5 campaigns-table-panel">
               <div className="section-header"><h3>Campaigns</h3><span>Backend-backed list</span></div>
               <div className="table-wrap table-wrap-strong dense-table">
-                <table className="data-table">
+                <table className="data-table responsive-table">
                   <thead><tr><th>Name</th><th>Status</th><th>Steps</th><th>Enrolled</th></tr></thead>
                   <tbody>
                     {campaigns.map((campaign) => {
                       const stats = campaignStats[campaign.id];
                       return (
                         <tr key={campaign.id} className={selectedCampaignId === campaign.id ? "row-selected" : ""} onClick={() => setSelectedCampaignId(campaign.id)}>
-                          <td><div className="person-cell"><strong>{campaign.name}</strong><span>{campaign.objective || "—"}</span></div></td>
-                          <td><span className={`status-pill ${campaign.status}`}>{campaign.status}</span></td>
-                          <td>{campaign.steps.length}</td>
-                          <td>{stats?.enrolled ?? 0}</td>
+                          <td data-label="Campaign"><div className="person-cell"><strong>{campaign.name}</strong><span>{campaign.objective || "—"}</span></div></td>
+                          <td data-label="Status"><span className={`status-pill ${campaign.status}`}>{campaign.status}</span></td>
+                          <td data-label="Steps">{campaign.steps.length}</td>
+                          <td data-label="Enrolled">{stats?.enrolled ?? 0}</td>
                         </tr>
                       );
                     })}
@@ -970,17 +975,17 @@ function App() {
             <div className="panel panel-span-8">
               <div className="section-header"><h3>Sender email table</h3><span>Product-grade list</span></div>
               <div className="table-wrap table-wrap-strong dense-table">
-                <table className="data-table">
+                <table className="data-table responsive-table">
                   <thead><tr><th>Mailbox</th><th>Provider</th><th>Reputation</th><th>Daily limit</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {senders.map((sender) => (
                       <tr key={sender.id}>
-                        <td><div className="person-cell"><strong>{sender.name}</strong><span>{sender.email}</span></div></td>
-                        <td>{sender.provider}</td>
-                        <td>{sender.reputation}</td>
-                        <td>{sender.dailyLimit}</td>
-                        <td><span className={`status-pill ${sender.status === "ready" ? "active" : "draft"}`}>{sender.status.replace("_", " ")}</span></td>
-                        <td><div className="inline-actions"><button className="secondary" onClick={() => { const inbox = accountInboxes.find((box) => box.emailAddress === sender.email); if (inbox) connectInbox(inbox.id); else setStatus("No backend inbox exists yet for this sender email."); }}>Connect</button><button className="secondary" onClick={() => { const inbox = accountInboxes.find((box) => box.emailAddress === sender.email); if (inbox) checkInboxHealth(inbox.id); else setStatus("Health checks need a created backend inbox."); }}>Health</button></div></td>
+                        <td data-label="Mailbox"><div className="person-cell"><strong>{sender.name}</strong><span>{sender.email}</span></div></td>
+                        <td data-label="Provider">{sender.provider}</td>
+                        <td data-label="Reputation">{sender.reputation}</td>
+                        <td data-label="Daily limit">{sender.dailyLimit}</td>
+                        <td data-label="Status"><span className={`status-pill ${sender.status === "ready" ? "active" : "draft"}`}>{sender.status.replace("_", " ")}</span></td>
+                        <td data-label="Actions"><div className="inline-actions"><button className="secondary" onClick={() => { const inbox = accountInboxes.find((box) => box.emailAddress === sender.email); if (inbox) connectInbox(inbox.id); else setStatus("No backend inbox exists yet for this sender email."); }}>Connect</button><button className="secondary" onClick={() => { const inbox = accountInboxes.find((box) => box.emailAddress === sender.email); if (inbox) checkInboxHealth(inbox.id); else setStatus("Health checks need a created backend inbox."); }}>Health</button></div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1015,9 +1020,9 @@ function App() {
             <div className="panel panel-span-7">
               <div className="section-header"><h3>Warmup table</h3><span>Mailbox health progression</span></div>
               <div className="table-wrap table-wrap-strong">
-                <table className="data-table">
+                <table className="data-table responsive-table">
                   <thead><tr><th>Mailbox</th><th>Phase</th><th>Progress</th><th>Replies</th><th>Opened</th></tr></thead>
-                  <tbody>{warmupRows.map((row) => <tr key={row.id}><td>{row.mailbox}</td><td>{row.phase}</td><td>{row.progress}%</td><td>{row.replies}</td><td>{row.opened}</td></tr>)}</tbody>
+                  <tbody>{warmupRows.map((row) => <tr key={row.id}><td data-label="Mailbox">{row.mailbox}</td><td data-label="Phase">{row.phase}</td><td data-label="Progress">{row.progress}%</td><td data-label="Replies">{row.replies}</td><td data-label="Opened">{row.opened}</td></tr>)}</tbody>
                 </table>
               </div>
             </div>
