@@ -22,4 +22,12 @@ export class EmailProviderRegistry {
     }
     return this.providers.get("mock-email")!;
   }
+
+  async verify(name: string): Promise<void> {
+    const provider = this.get(name);
+    if (!provider) throw new Error(`Unknown email provider: ${name}`);
+    if (provider.verify) {
+      await provider.verify();
+    }
+  }
 }

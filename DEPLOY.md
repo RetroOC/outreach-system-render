@@ -124,11 +124,12 @@ npm run build && npm run start:worker
 4. create account
 5. create an inbox with provider `gmail`
 6. connect that inbox
-7. use `POST /inboxes/:inboxId/send-test` to send a real Gmail test email
-8. create lead(s)
-9. create campaign
-10. enroll leads into campaign with the Gmail inbox
-11. hit `POST /ops/worker/tick` (or run the worker) to send due campaign steps
+7. call `POST /inboxes/:inboxId/connect` to verify the Gmail credentials from `.env`
+8. use `POST /inboxes/:inboxId/send-test` to send a real Gmail test email
+9. create lead(s)
+10. create campaign
+11. enroll leads into campaign with the Gmail inbox
+12. hit `POST /ops/worker/tick` (or run the worker) to send due campaign steps
 
 If those work, the Gmail MVP is functional.
 

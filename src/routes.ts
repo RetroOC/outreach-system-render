@@ -96,13 +96,31 @@ export async function registerRoutes(app: FastifyInstance, deps: { storage: Stor
     return { data: await storage.createInbox(body) };
   });
 
-  app.post("/inboxes/:inboxId/connect", async (request) => {
+  app.post("/inboxes/:inboxId/connect", async (request, reply) => {
     const params = z.object({ inboxId: z.string() }).parse(request.params);
     const inbox = await storage.getInboxById(params.inboxId);
     if (!inbox) return { error: { code: "NOT_FOUND", message: "Inbox not found" } };
-    inbox.authStatus = "connected";
-    await storage.updateInbox(inbox);
-    return { data: { inboxId: inbox.id, authStatus: inbox.authStatus } };
+
+    try {
+      const verification = await deps.outboundService.verifyInboxConnection(params.inboxId);
+      inbox.authStatus = "connected";
+      inbox.healthStatus = "healthy";
+      inbox.lastSyncAt = verification.verifiedAt;
+      await storage.updateInbox(inbox);
+      reply.code(201);
+      return { data: { inboxId: inbox.id, authStatus: inbox.authStatus, provider: inbox.provider, verifiedAt: verification.verifiedAt } };
+    } catch (error) {
+      inbox.authStatus = "expired";
+      inbox.healthStatus = "degraded";
+      await storage.updateInbox(inbox);
+      reply.code(400);
+      return {
+        error: {
+          code: "INBOX_CONNECT_FAILED",
+          message: error instanceof Error ? error.message : "Inbox connection failed",
+        },
+      };
+    }
   });
 
   app.post("/inboxes/:inboxId/send-test", async (request, reply) => {

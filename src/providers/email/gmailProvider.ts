@@ -18,6 +18,11 @@ export class GmailProvider implements EmailProvider {
     });
   }
 
+  async verify(): Promise<void> {
+    const transport = this.getTransport();
+    await transport.verify();
+  }
+
   async send(input: SendEmailInput): Promise<SendEmailResult> {
     const transport = this.getTransport();
     const info = await transport.sendMail({

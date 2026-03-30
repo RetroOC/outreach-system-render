@@ -7,6 +7,17 @@ export class OutboundService {
     private readonly emailProviders: EmailProviderRegistry,
   ) {}
 
+  async verifyInboxConnection(inboxId: string): Promise<{ inboxId: string; provider: string; verifiedAt: string }> {
+    const inbox = await this.storage.getInboxById(inboxId);
+    if (!inbox) throw new Error(`Inbox not found: ${inboxId}`);
+    await this.emailProviders.verify(inbox.provider);
+    return {
+      inboxId: inbox.id,
+      provider: inbox.provider,
+      verifiedAt: new Date().toISOString(),
+    };
+  }
+
   async processSendStepJob(payload: Record<string, unknown>): Promise<void> {
     const enrollmentId = String(payload.enrollmentId ?? "");
     const enrollment = await this.storage.getEnrollmentById(enrollmentId);

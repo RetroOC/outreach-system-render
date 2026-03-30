@@ -27,4 +27,5 @@ export interface EmailProvider {
   readonly name: string;
   send(input: SendEmailInput): Promise<SendEmailResult>;
   normalizeInbound(payload: Record<string, unknown>): Promise<InboundEmailEvent | null>;
+  verify?(): Promise<void>;
 }
