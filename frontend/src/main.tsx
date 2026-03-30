@@ -610,6 +610,15 @@ function App() {
 
         {nav === "leads" && (
           <section className="page-grid leads-page-grid">
+            <div className="panel panel-span-12 filter-strip-panel">
+              <div className="filter-strip">
+                <div className="filter-chip active">All leads <strong>{filteredLeads.length}</strong></div>
+                <div className="filter-chip">Imported <strong>{leadImports.length}</strong></div>
+                <div className="filter-chip">Selected <strong>{selectedLeadIds.length}</strong></div>
+                <div className="filter-chip">Tags <strong>{allTags.length}</strong></div>
+                <div className="filter-chip">Custom fields <strong>{allCustomFields.length}</strong></div>
+              </div>
+            </div>
             <div className="panel panel-span-4">
               <div className="section-header"><h3>Import leads</h3><span>Current backend flow</span></div>
               <label><span>File name</span><input value={fileName} onChange={(e) => setFileName(e.target.value)} /></label>
@@ -760,6 +769,17 @@ function App() {
 
             {campaignFlowTab === "sequence" && (
               <div className="panel panel-span-7 sequence-editor-shell">
+                <div className="sequence-toolbar">
+                  <div className="mini-tabs">
+                    <button className="mini-tab active">Steps</button>
+                    <button className="mini-tab">Variants</button>
+                    <button className="mini-tab">Preview</button>
+                  </div>
+                  <div className="panel-actions">
+                    <button className="secondary" onClick={resetSequenceDraft}>New draft</button>
+                    <button className="secondary" onClick={() => selectedSequenceId && loadSequenceIntoBuilder(selectedSequenceId)}>Load saved</button>
+                  </div>
+                </div>
                 <div className="split-pane">
                   <div className="split-sidebar">
                     <div className="section-header"><h3>Sequence steps</h3><span>Local-first editor</span></div>
@@ -877,6 +897,12 @@ function App() {
             </div>
             <div className="panel panel-span-8 inbox-detail-panel">
               <div className="section-header"><h3>Reply workspace</h3><span>Master inbox layout</span></div>
+              <div className="filter-strip compact-strip">
+                <div className="filter-chip active">Unread</div>
+                <div className="filter-chip">Positive</div>
+                <div className="filter-chip">Waiting</div>
+                <div className="filter-chip">Closed</div>
+              </div>
               <div className="reply-thread-shell">
                 <div className="message-bubble inbound"><strong>Alice Morgan</strong><p>Happy to look at this next week — can you send a few times?</p><span>2 min ago</span></div>
                 <div className="message-bubble outbound"><strong>{auth.operatorName}</strong><p>Absolutely — I can do Wednesday 11:00 CET or Thursday 14:30 CET. Which works best?</p><span>Draft reply</span></div>
