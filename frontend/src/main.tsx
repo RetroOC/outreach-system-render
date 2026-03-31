@@ -29,13 +29,13 @@ const STORAGE_KEYS = {
   senders: "outreach-ui-senders",
   warmup: "outreach-ui-warmup",
 };
-const navItems: { key: NavKey; label: string; kicker: string; icon: string }[] = [
-  { key: "overview", label: "Dashboard", kicker: "Revenue pulse", icon: "◫" },
-  { key: "leads", label: "Leads", kicker: "Prospects", icon: "◎" },
-  { key: "campaigns", label: "Campaigns", kicker: "Sequences + launch", icon: "↗" },
-  { key: "inbox", label: "Master Inbox", kicker: "Conversations", icon: "✉" },
-  { key: "senders", label: "Sender Emails", kicker: "Mailboxes", icon: "◌" },
-  { key: "warmup", label: "Warmup", kicker: "Deliverability", icon: "△" },
+const navItems: { key: NavKey; label: string; kicker: string; icon: string; crumb: string }[] = [
+  { key: "overview", label: "Dashboard", kicker: "Revenue pulse", icon: "◫", crumb: "Dashboard" },
+  { key: "leads", label: "Leads", kicker: "Prospects", icon: "◎", crumb: "Leads" },
+  { key: "campaigns", label: "Campaigns", kicker: "Sequences + launch", icon: "↗", crumb: "Campaigns" },
+  { key: "inbox", label: "Master Inbox", kicker: "Conversations", icon: "✉", crumb: "Master Inbox" },
+  { key: "senders", label: "Sender Emails", kicker: "Mailboxes", icon: "◌", crumb: "Settings > Email Accounts" },
+  { key: "warmup", label: "Email Warmup", kicker: "Deliverability", icon: "△", crumb: "Settings > Sender Email Warmup" },
 ];
 const flowTabs: { key: CampaignFlowTab; label: string }[] = [
   { key: "leads", label: "Leads" },
@@ -514,17 +514,15 @@ function App() {
     <div className="product-shell bison-shell">
       <button className="mobile-sidebar-toggle" onClick={() => setSidebarOpen(true)}>☰ Menu</button>
       {sidebarOpen && <button className="sidebar-overlay" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
-      <aside className={sidebarOpen ? "sidebar sidebar-polished mobile-open" : "sidebar sidebar-polished"}>
-        <div className="brand-block brand-block-strong">
-          <div className="brand-mark">B</div>
-          <div>
-            <strong>{auth.workspaceName}</strong>
-            <span>Outbound control room</span>
-          </div>
+      <aside className={sidebarOpen ? "sidebar sidebar-whitsiro mobile-open" : "sidebar sidebar-whitsiro"}>
+        <div className="brand-header">
+          <div className="brand-mark brand-mark-light">◔</div>
+          <div className="sidebar-collapse">◫</div>
         </div>
 
+        <div className="workspace-switcher">SIRO || Lead Generation.</div>
+
         <div className="sidebar-section">
-          <span className="sidebar-label">Workspace</span>
           <nav className="nav-stack">
             {navItems.map((item) => (
               <button key={item.key} className={nav === item.key ? "nav-item active" : "nav-item"} onClick={() => changeNav(item.key)}>
@@ -535,26 +533,38 @@ function App() {
           </nav>
         </div>
 
-        <div className="sidebar-note sidebar-note-elevated">
-          <strong>Working account</strong>
+        <div className="sidebar-note sidebar-note-plain">
+          <strong>Developers</strong>
+          <small>Documentation</small>
+          <small>Developer API</small>
+          <small>Webhooks & Listeners</small>
+          <small>Settings</small>
+          <small>Help & Support</small>
+          <small>Logout</small>
           <select value={selectedAccountId} onChange={(e) => { setSelectedAccountId(e.target.value); setSidebarOpen(false); }}>
             <option value="">Select account</option>
             {accounts.map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}
           </select>
-          <small>{selectedAccount ? `Using ${selectedAccount.name}` : "Create an account to start importing and launching."}</small>
         </div>
+        <div className="sidebar-user"><span className="mini-avatar">GK</span><span>Gershon K.</span></div>
       </aside>
 
-      <main className="workspace">
-        <header className="topbar topbar-polished">
-          <div>
-            <div className="eyebrow">{navItems.find((item) => item.key === nav)?.label || "Dashboard"}</div>
-            <h1>{nav === "overview" ? "Outbound dashboard" : nav === "leads" ? "Lead database" : nav === "campaigns" ? "Campaign builder" : nav === "inbox" ? "Master inbox" : nav === "senders" ? "Sender emails" : "Warmup center"}</h1>
+      <main className="workspace workspace-whitsiro">
+        <header className="topbar topbar-whitsiro">
+          <div className="topbar-copy">
+            <div className="breadcrumb-row"><span>Home</span><span>›</span><span>{navItems.find((item) => item.key === nav)?.crumb || "Dashboard"}</span></div>
+            <h1>{nav === "overview" ? "Main Dashboard" : nav === "leads" ? "Leads" : nav === "campaigns" ? "Campaigns" : nav === "inbox" ? "Master Inbox" : nav === "senders" ? "Sender Emails" : "Sender Email Warmup"}</h1>
+            <p>{nav === "overview" ? "Full overview of your current workspace" : nav === "leads" ? "Manage all your workspace leads" : nav === "campaigns" ? "Create a new campaign or track your existing sequences" : nav === "inbox" ? "Manage all of your emails in one place" : nav === "senders" ? "Manage and connect your email accounts" : "Warmup your sender email accounts with minimal effort using a high quality private pool"}</p>
           </div>
-          <div className="topbar-actions">
+          <div className="topbar-actions topbar-actions-whitsiro">
             <button className="mobile-topbar-button" onClick={() => setSidebarOpen(true)}>☰</button>
-            <div className="search-pill">⌘K · Search leads, campaigns, senders</div>
-            <div className="operator-pill">
+            {nav === "overview" ? <button className="ghost-button soft-button">Last 10 days</button> : null}
+            {nav === "leads" ? <><button className="ghost-button soft-button">Get Help ↗</button><button>Import new leads</button></> : null}
+            {nav === "campaigns" ? <><button className="ghost-button soft-button">Get Help ↗</button><button className="ghost-button soft-button">Sending Schedule</button><button>Create Campaign</button></> : null}
+            {nav === "inbox" ? <><button className="ghost-button soft-button">Get Help ↗</button><button className="ghost-button soft-button">⧉</button><button className="ghost-button soft-button">◌</button><button>▶ Compose email</button></> : null}
+            {nav === "senders" ? <><button className="ghost-button soft-button">Get Help ↗</button><button className="ghost-button soft-button">Connect email account</button></> : null}
+            {nav === "warmup" ? <><button className="ghost-button soft-button">Get Help ↗</button><button className="ghost-button soft-button">◌</button><button className="ghost-button soft-button">Last 10 days</button></> : null}
+            <div className="operator-pill operator-pill-subtle">
               <div className="avatar">{initials(auth.operatorName)}</div>
               <div>
                 <strong>{auth.operatorName}</strong>
